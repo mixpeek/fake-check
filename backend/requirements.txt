@@ -1,0 +1,31 @@
+# Core ML/Torch (ensure CUDA 11.8 compatibility if using this exact torch version)
+torch==2.2.1+cu118
+torchvision==0.17.1+cu118
+torchaudio==2.2.1+cu118
+numpy==1.26.4
+
+# Transformers Stack
+tokenizers==0.15.2
+huggingface-hub==0.23.2
+transformers==4.39.3
+
+# Vision/Audio Models
+open-clip-torch==2.23.0
+openai-whisper==20231117
+
+# Google Generative AI
+google-generativeai==0.5.2
+
+# Video/Audio/Web Utilities
+ffmpeg-python==0.2.0
+opencv-python-headless==4.9.0.80
+aiohttp==3.9.3
+
+# Async Utilities
+nest_asyncio==1.6.0
+
+# For Eye Blink Detection
+mediapipe==0.10.9
+
+# Image handling (often a dependency, good to have explicit)
+Pillow==10.1.0
