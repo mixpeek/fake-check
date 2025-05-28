@@ -14,7 +14,7 @@ def sigmoid(x: float) -> float:
     if x < -700: x = -700 
     return 1 / (1 + np.exp(-x))
 
-# --- CLIP Model & Scoring ---
+# CLIP Model & Scoring
 REAL_PERSON_PROMPTS_CLIP = [
     "a typical frame from a live-action video recording of a real person",
     "a natural, unedited video still of a human being",
@@ -86,7 +86,7 @@ def calculate_visual_clip_score(
     return sigmoid(scaled_score)
 
 
-# --- Whisper ASR Model & Transcription ---
+# Whisper ASR Model & Transcription
 def transcribe_audio_content(
     wav_path: Optional[str], # Made wav_path optional
     whisper_model 

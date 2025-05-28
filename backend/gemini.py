@@ -1,124 +1,193 @@
-# df_utils_gemini.py
+# gemini.py  
 
-import os
-import sys
-import base64
-import tempfile
-import asyncio
-from typing import List, Tuple, Any
+import os, sys, base64, tempfile, asyncio, functools
+from typing import List, Tuple, Any, Dict
 from io import BytesIO
+import time, requests                         
 
 import ffmpeg
 from PIL import Image
-# google.generativeai (genai) client passed from notebook
+from google.api_core import exceptions as _gax_exc
 
-def _pil_to_b64_jpeg(pil_image: Image.Image) -> str:
-    buffered = BytesIO()
-    pil_image.save(buffered, format="JPEG", quality=85) # Quality 85 is good
-    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+GEMINI_PY_VERSION = "1.7_full_flags_async_fix"
 
-async def gemini_check_visual_artifacts(
-    pil_frames: List[Image.Image],
-    gemini_model_instance # Pass the initialized model
-) -> int:
-    if not gemini_model_instance or not pil_frames: 
-        print("Warning: Gemini visual check skipped (no model or no frames).", file=sys.stderr)
+# 1) Async-client protobuf bug work-around
+async def safe_generate_content(model, content, *, max_retries: int = 2):
+    """
+    Call model.generate_content_async(content).  Works around the protobuf
+    '__await__' bug and retries on transient connection resets.
+    """
+    attempt = 0
+    while True:
+        try:
+            return await model.generate_content_async(content)
+        except AttributeError as e:
+            if "Unknown field" not in str(e):
+                raise                 # different bug → re-raise
+        except requests.exceptions.ConnectionError as e:
+            if attempt >= max_retries:
+                raise                 # bubble out after N retries
+            attempt += 1
+            wait = 3 ** attempt       # 2s, 4s back-off
+            print(f"GEMINI_WARN: connection reset – retry {attempt}/{max_retries} in {wait}s",
+                  file=sys.stderr)
+            time.sleep(wait)
+            continue
+        except _gax_exc.GoogleAPICallError:
+            raise                     # real API error → propagate
+
+        # protobuf bug fall-back
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None,
+                functools.partial(model.generate_content, content))
+
+# 2) Generic helpers
+def _pil_to_b64_jpeg(img: Image.Image) -> str:
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return base64.b64encode(buf.getvalue()).decode()
+
+async def _run_ffmpeg_probe(video_path: str) -> Dict[str, Any]:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, ffmpeg.probe, video_path)
+
+async def _run_ffmpeg_extract(video_path: str, start: float,
+                              dur: float, out_path: str):
+    def _sync():
+        (ffmpeg
+         .input(video_path, ss=start, t=dur)
+         .output(out_path, vcodec="libx264", acodec="aac",
+                 strict="experimental", loglevel="error")
+         .overwrite_output()
+         .run(capture_stdout=True, capture_stderr=True))
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _sync)
+
+def _pick_frames(frames: List[Image.Image]) -> List[Image.Image]:
+    n = len(frames)
+    if n <= 2:
+        return frames
+    return [frames[0], frames[n // 2], frames[-1]]
+
+def _extract_text(resp, fn=""):
+    if hasattr(resp, "text"):
+        return resp.text.strip().upper()
+    if hasattr(resp, "candidates"):
+        for cand in resp.candidates:
+            if hasattr(cand, "content") and hasattr(cand.content, "parts"):
+                txts = [p.text for p in cand.content.parts if hasattr(p, "text")]
+                if txts:
+                    return " ".join(txts).strip().upper()
+    print(f"GEMINI_DEBUG ({fn}): no usable text in response", file=sys.stderr)
+    return ""
+
+def _log_exc(fn, exc):
+    print(f"GEMINI_ERROR ({fn}): {exc}", file=sys.stderr)
+    import traceback; traceback.print_exc(file=sys.stderr)
+
+# 3) Individual Gemini checks
+async def gemini_check_visual_artifacts(frames: List[Image.Image], model) -> int:
+    fn = "gemini_check_visual_artifacts"
+    if not model or not frames:
         return 0
-    
-    num_frames = len(pil_frames)
-    if num_frames == 0: return 0
-    elif num_frames == 1: picked_frames = [pil_frames[0]]
-    elif num_frames == 2: picked_frames = [pil_frames[0], pil_frames[-1]]
-    else: picked_frames = [pil_frames[0], pil_frames[num_frames//2], pil_frames[-1]]
-        
-    image_parts = [{"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)} for f in picked_frames]
-    prompt = "Examine these video frames. Do you observe any clear visual artifacts, unnatural distortions, or inconsistencies that strongly suggest these are from an AI-generated deepfake video? Respond with only YES or NO."
-    
+    prompt = ("Examine these frames. Do you see clear visual artifacts or "
+              "distortions that strongly suggest AI deepfake? YES / NO.")
+    parts = [prompt] + [
+        {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
+        for f in _pick_frames(frames)
+    ]
     try:
-        # Use generate_content_async for await
-        response = await gemini_model_instance.generate_content_async([prompt] + image_parts)
-        response_text = response.text.strip().upper()
-        return 1 if "YES" in response_text else 0
-    except Exception as e:
-        print(f"Gemini visual artifact check error: {e}", file=sys.stderr)
-        return 0
+        resp = await safe_generate_content(model, parts)
+        text = _extract_text(resp, fn)
 
-async def gemini_check_lipsync(
-    video_file_path: str,
-    transcript_text: str,
-    gemini_model_instance # Pass the initialized model
-) -> int:
-    if not gemini_model_instance:
-        print("Warning: Gemini lipsync check skipped (no model).", file=sys.stderr)
+        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+
+        return 1 if "YES" in text else 0
+    except Exception as e:
+        _log_exc(fn, e); return 0
+
+async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
+    fn = "gemini_check_abnormal_blinks"
+    if not model or not frames:
         return 0
-    if not transcript_text or not transcript_text.strip():
-        # Lip sync check needs transcript
-        print("Warning: Gemini lipsync check skipped (no transcript).", file=sys.stderr)
-        return 0 
-    
-    temp_clip_fd, temp_clip_path = tempfile.mkstemp(suffix=".mp4")
-    os.close(temp_clip_fd) 
-    clip_generated_successfully = False
+    prompt = ("Inspect the eyes in these frames. Is the blinking pattern "
+              "abnormal or unnatural? Respond YES / NO.")
+    parts = [prompt] + [
+        {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
+        for f in _pick_frames(frames)
+    ]
     try:
-        probe_data = ffmpeg.probe(video_file_path)
-        duration_s = float(probe_data['format']['duration'])
-        clip_len_s = 2.0 
-        start_s = max(0.0, (duration_s / 2.0) - (clip_len_s / 2.0))
-        if start_s + clip_len_s > duration_s:
-            start_s = 0.0
-            clip_len_s = duration_s
-        if clip_len_s <= 0.1: # Need a meaningful clip
-            print(f"Video too short ({duration_s:.2f}s) for Gemini lipsync clip.", file=sys.stderr)
-            if os.path.exists(temp_clip_path): os.remove(temp_clip_path) # Clean up empty temp file
-            return 0
-
-
-        ffmpeg.input(video_file_path, ss=start_s, t=clip_len_s).output(
-            temp_clip_path, vcodec="libx264", acodec="aac", strict="experimental", loglevel="error"
-        ).overwrite_output().run(capture_stdout=True, capture_stderr=True) # Added capture for debugging
-        
-        if not os.path.exists(temp_clip_path) or os.path.getsize(temp_clip_path) == 0:
-            print(f"Failed to create or created an empty temporary clip: {temp_clip_path}", file=sys.stderr)
-            # No need to remove here, finally block will handle if clip_generated_successfully is False
-            return 0
-        clip_generated_successfully = True # Set flag only if clip generation seems successful
-            
-        with open(temp_clip_path, "rb") as f: video_bytes = f.read()
-        video_b64 = base64.b64encode(video_bytes).decode('utf-8')
-
-        prompt = (
-            "Watch this short video clip and read the provided text snippet (supposedly the transcript for this clip). "
-            "Are the speaker's lip movements reasonably synchronized with the spoken words in the transcript? "
-            "Answer with only YES (if synchronized) or NO (if not synchronized or mismatched)."
-        )
-        content_parts = [prompt, {"mime_type": "video/mp4", "data": video_b64}, {"text": transcript_text[:500]}] # Limit transcript
-        
-        response = await gemini_model_instance.generate_content_async(content_parts)
-        response_text = response.text.strip().upper()
-        return 1 if "NO" in response_text else 0 # 1 if NOT synchronized (i.e., issue found)
-    except ffmpeg.Error as e_ff:
-        print(f"FFmpeg error during Gemini lipsync clip generation: {e_ff.stderr.decode('utf8', errors='ignore') if e_ff.stderr else 'No stderr'}", file=sys.stderr)
-        return 0
+        resp = await safe_generate_content(model, parts)
+        return 1 if "YES" in _extract_text(resp, fn) else 0
     except Exception as e:
-        print(f"Gemini lipsync check error: {e}", file=sys.stderr)
+        _log_exc(fn, e); return 0
+
+async def gemini_check_lipsync(video_path: str, transcript: str,
+                               model) -> int:
+    fn = "gemini_check_lipsync"
+    if not model or not transcript:
         return 0
+
+    tmp_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+    try:
+        duration = float((await _run_ffmpeg_probe(video_path))
+                         ["format"]["duration"])
+        clip_len = min(2.0, duration)
+        start = max(0.0, (duration - clip_len) / 2.0)
+        await _run_ffmpeg_extract(video_path, start, clip_len, tmp_clip)
+
+        clip_b64 = base64.b64encode(open(tmp_clip, "rb").read()).decode()
+        prompt = ("Watch the clip and read the text. Are lip motions synced "
+                  "with the speech? YES / NO.")
+        parts = [prompt,
+                 {"mime_type": "video/mp4", "data": clip_b64},
+                 {"text": transcript[:500]}]
+
+        resp = await safe_generate_content(model, parts)
+        # Return 1 for mismatch
+        return 1 if "NO" in _extract_text(resp, fn) else 0
+    except Exception as e:
+        _log_exc(fn, e); return 0
     finally:
-        # Ensure temp_clip_path is defined and exists before trying to remove
-        if 'temp_clip_path' in locals() and temp_clip_path and os.path.exists(temp_clip_path):
-            os.remove(temp_clip_path)
+        if os.path.exists(tmp_clip):
+            os.remove(tmp_clip)
 
-
+# 4) Orchestrator with enable_* flags
 async def run_gemini_inspections(
-    pil_frames: List[Image.Image],
-    video_file_path: str,
-    transcript_text: str,
-    gemini_model_instance 
-) -> Tuple[int, int]:
-    if not gemini_model_instance:
-        return 0, 0 
-        
-    visual_flag, sync_flag = await asyncio.gather(
-        gemini_check_visual_artifacts(pil_frames, gemini_model_instance),
-        gemini_check_lipsync(video_file_path, transcript_text, gemini_model_instance)
-    )
-    return visual_flag, sync_flag
+    frames: List[Image.Image],
+    video_path: str,
+    transcript: str,
+    model,
+    *,
+    enable_visual_artifacts: bool = True,
+    enable_lipsync: bool = True,
+    enable_abnormal_blinks: bool = True,
+) -> Tuple[int, int, int]:
+    """
+    Returns (visual_flag, lipsync_flag, blink_flag).
+    Disabled checks return 0.
+    """
+    if not model:
+        return 0, 0, 0
+
+    tasks, tags = [], []
+    if enable_visual_artifacts:
+        tasks.append(gemini_check_visual_artifacts(frames, model))
+        tags.append("vis")
+    if enable_lipsync:
+        tasks.append(gemini_check_lipsync(video_path, transcript, model))
+        tags.append("lip")
+    if enable_abnormal_blinks:
+        tasks.append(gemini_check_abnormal_blinks(frames, model))
+        tags.append("blink")
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    vis = lip = blink = 0
+    for tag, res in zip(tags, results):
+        flag = res if isinstance(res, int) else 0
+        if tag == "vis":   vis   = flag
+        if tag == "lip":   lip   = flag
+        if tag == "blink": blink = flag
+
+    return vis, lip, blink

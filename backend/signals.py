@@ -7,7 +7,7 @@ from typing import List, Dict, Optional, Tuple, Any
 import numpy as np
 # from google.cloud import vision # Imported in notebook, client passed in
 
-# --- Eye Blink Detection (Google Cloud Vision API) ---
+# Eye Blink Detection (Google Cloud Vision API)
 
 def _get_landmark_pos_from_list(
     landmarks_from_vision_api: List[Dict[str, Any]],
@@ -170,7 +170,7 @@ async def get_eye_landmarks_from_vision_api(
     each face is a list of its landmark dicts {'type': type_name, 'x': x, 'y': y, 'z': z}.
     Returns None for a frame's face list if an error occurs or no faces/landmarks are found.
     """
-    from google.cloud import vision_v1 as vision # Keep import here for clarity or if run standalone
+    from google.cloud import vision_v1 as vision
     
     if not image_bytes_list:
         return []
@@ -178,26 +178,22 @@ async def get_eye_landmarks_from_vision_api(
     requests = []
     for img_bytes in image_bytes_list:
         image = vision.Image(content=img_bytes)
-        features = [vision.Feature(type_=vision.Feature.Type.FACE_DETECTION, max_results=1)] # Max 1 face
+        features = [vision.Feature(type_=vision.Feature.Type.FACE_DETECTION, max_results=1)]
         requests.append(vision.AnnotateImageRequest(image=image, features=features))
 
     all_frames_parsed_landmarks: List[Optional[List[List[Dict[str, Any]]]]] = []
     try:
-        # The standard Python client library's batch_annotate_images is synchronous.
-        # To call it from an async function, it should be wrapped with asyncio.to_thread.
-        # The main notebook's `awaitable` will run the calling async function.
-        # If this `get_eye_landmarks_from_vision_api` itself is called with `await`,
-        # and `vision_client.batch_annotate_images` is sync, it needs wrapping.
-        # Assuming the caller (in notebook) handles running sync code in executor for async context.
+        # Create a BatchAnnotateImagesRequest object
+        batch_request = vision.BatchAnnotateImagesRequest(requests=requests)
         
-        # If called directly from an async func and vision_client is sync:
+        # Since vision_client.batch_annotate_images is synchronous, 
+        # we'll run it in a thread executor to avoid blocking the event loop
         loop = asyncio.get_running_loop()
-        response_batch = await loop.run_in_executor(None, vision_client.batch_annotate_images, {"requests": requests})
-        # Note: The above line uses `{"requests": requests}` because `batch_annotate_images`
-        # can take keyword arguments or a `BatchAnnotateImagesRequest` object.
-        # If it expects only `requests=...` then it should be:
-        # response_batch = await loop.run_in_executor(None, lambda: vision_client.batch_annotate_images(requests=requests))
-
+        response_batch = await loop.run_in_executor(
+            None, 
+            vision_client.batch_annotate_images, 
+            batch_request
+        )
 
         for i, response in enumerate(response_batch.responses):
             if response.error.message:
