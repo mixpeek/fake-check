@@ -118,7 +118,11 @@ async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
     ]
     try:
         resp = await safe_generate_content(model, parts)
-        return 1 if "YES" in _extract_text(resp, fn) else 0
+        text = _extract_text(resp, fn)
+        
+        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+        
+        return 1 if "YES" in text else 0
     except Exception as e:
         _log_exc(fn, e); return 0
 
@@ -144,8 +148,12 @@ async def gemini_check_lipsync(video_path: str, transcript: str,
                  {"text": transcript[:500]}]
 
         resp = await safe_generate_content(model, parts)
+        text = _extract_text(resp, fn)
+        
+        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+        
         # Return 1 for mismatch
-        return 1 if "NO" in _extract_text(resp, fn) else 0
+        return 1 if "NO" in text else 0
     except Exception as e:
         _log_exc(fn, e); return 0
     finally:
