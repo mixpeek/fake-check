@@ -1,31 +1,42 @@
-# Core ML/Torch (ensure CUDA 11.8 compatibility if using this exact torch version)
-torch==2.2.1+cu118
-torchvision==0.17.1+cu118
-torchaudio==2.2.1+cu118
+# Core dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# ML/AI dependencies - matching notebook versions
 numpy==1.26.4
+Pillow==9.5.0
 
-# Transformers Stack
-tokenizers==0.15.2
-huggingface-hub==0.23.2
-transformers==4.39.3
+# PyTorch - CPU version by default
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1
+# For CUDA support, install with:
+# pip install torch==2.2.1+cu118 torchvision==0.17.1+cu118 torchaudio==2.2.1+cu118 --index-url https://download.pytorch.org/whl/cu118
 
-# Vision/Audio Models
+# Transformers and related
+transformers>=4.30.0,<4.41.0
+huggingface-hub>=0.20.0
+tokenizers>=0.14.0
+ftfy>=6.0
 open-clip-torch==2.23.0
+
+# Whisper dependencies
+numba==0.58.1
 openai-whisper==20231117
 
-# Google Generative AI
+# Google Gemini
 google-generativeai==0.5.2
+google-api-core~=2.11.1
+protobuf==4.25.3
 
-# Video/Audio/Web Utilities
+# Video processing
 ffmpeg-python==0.2.0
 opencv-python-headless==4.9.0.80
-aiohttp==3.9.3
 
-# Async Utilities
-nest_asyncio==1.6.0
-
-# For Eye Blink Detection
-mediapipe==0.10.9
-
-# Image handling (often a dependency, good to have explicit)
-Pillow==10.1.0
+# Async support
+nest-asyncio==1.6.0
+aiofiles==23.2.1

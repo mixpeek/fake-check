@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 interface ExampleVideo {
   id: string;
   title: string;
+  path: string;
   thumbnail: string;
   duration: string;
 }
@@ -13,28 +14,43 @@ const exampleVideos: ExampleVideo[] = [
   {
     id: '1',
     title: 'AI Generated Speech',
-    thumbnail: 'https://images.pexels.com/photos/7015034/pexels-photo-7015034.jpeg?auto=compress&cs=tinysrgb&w=300',
+    path: '/videos/example1.mp4',
+    thumbnail: '/videos/example1.mp4',
     duration: '0:15'
   },
   {
     id: '2',
     title: 'Deepfake Example',
-    thumbnail: 'https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=300',
+    path: '/videos/example2.mp4',
+    thumbnail: '/videos/example2.mp4',
     duration: '0:30'
   },
   {
     id: '3',
     title: 'Real Video Reference',
-    thumbnail: 'https://images.pexels.com/photos/5473955/pexels-photo-5473955.jpeg?auto=compress&cs=tinysrgb&w=300',
+    path: '/videos/example3.mp4',
+    thumbnail: '/videos/example3.mp4',
     duration: '0:20'
   }
 ];
 
 interface ExampleVideosProps {
-  onSelect: (videoId: string) => void;
+  onSelect: (file: File) => void;
 }
 
 export const ExampleVideos: React.FC<ExampleVideosProps> = ({ onSelect }) => {
+  const handleVideoSelect = async (video: ExampleVideo) => {
+    try {
+      // Fetch the video file and create a File object
+      const response = await fetch(video.path);
+      const blob = await response.blob();
+      const file = new File([blob], `example-${video.id}.mp4`, { type: 'video/mp4' });
+      onSelect(file);
+    } catch (error) {
+      console.error('Error loading example video:', error);
+    }
+  };
+
   return (
     <div className="mt-8">
       <h3 className="text-lg font-medium text-gray-900 mb-4">Or try an example:</h3>
@@ -44,13 +60,13 @@ export const ExampleVideos: React.FC<ExampleVideosProps> = ({ onSelect }) => {
             key={video.id}
             className="relative group cursor-pointer rounded-lg overflow-hidden"
             whileHover={{ scale: 1.02 }}
-            onClick={() => onSelect(video.id)}
+            onClick={() => handleVideoSelect(video)}
           >
-            <div className="aspect-video relative">
-              <img
-                src={video.thumbnail}
-                alt={video.title}
-                className="w-full h-full object-cover"
+            <div className="aspect-video relative bg-gray-900">
+              <video
+                src={video.path}
+                className="w-full h-full object-cover opacity-80"
+                preload="metadata"
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
                 <div className="rounded-full bg-white bg-opacity-90 p-3 transform group-hover:scale-110 transition-transform">

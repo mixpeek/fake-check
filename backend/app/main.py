@@ -3,16 +3,14 @@ FastAPI application for deepfake detection
 """
 import os
 import uuid
-import asyncio
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 from pathlib import Path
 import tempfile
 import shutil
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from .schemas import (
     AnalyzeResponse,
@@ -21,7 +19,6 @@ from .schemas import (
     JobStatus,
     JobState
 )
-from .config import settings
 from .dependencies import get_models
 from .pipeline import run_detection_pipeline
 
@@ -35,14 +32,13 @@ app = FastAPI(
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Add your frontend URL
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# In-memory job storage (for demo purposes)
-# In production, use Redis or a database
+# In-memory job storage (simple for demo)
 jobs: Dict[str, JobState] = {}
 
 # Temporary file storage
@@ -59,13 +55,13 @@ async def process_video_background(job_id: str, video_path: str):
         jobs[job_id].status = JobStatus.PROCESSING
         jobs[job_id].started_at = datetime.utcnow()
         
-        # Load models if not already loaded
+        # Get models
         models = await get_models()
         
         # Run the detection pipeline
         result = await run_detection_pipeline(
             video_path=video_path,
-            models=models,
+            models_dict=models,
             job_id=job_id
         )
         
@@ -87,17 +83,6 @@ async def process_video_background(job_id: str, video_path: str):
                 os.remove(video_path)
         except Exception:
             pass
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Initialize models on startup (optional)
-    """
-    if settings.PRELOAD_MODELS:
-        print("Preloading models...")
-        await get_models()
-        print("Models loaded successfully")
 
 
 @app.get("/")
@@ -130,19 +115,6 @@ async def analyze_video(
             status_code=400,
             detail="Invalid file type. Supported formats: MP4, AVI, MOV, MKV, WebM"
         )
-    
-    # Check file size (optional, set limit in settings)
-    if settings.MAX_FILE_SIZE_MB > 0:
-        # Read file size
-        file.file.seek(0, 2)  # Seek to end
-        file_size = file.file.tell()
-        file.file.seek(0)  # Reset to beginning
-        
-        if file_size > settings.MAX_FILE_SIZE_MB * 1024 * 1024:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File too large. Maximum size: {settings.MAX_FILE_SIZE_MB}MB"
-            )
     
     # Generate job ID
     job_id = str(uuid.uuid4())
@@ -193,15 +165,12 @@ async def get_job_status(job_id: str):
     
     job = jobs[job_id]
     
-    # Calculate progress (simplified)
+    # Calculate progress
     progress = 0.0
     if job.status == JobStatus.COMPLETED:
         progress = 1.0
     elif job.status == JobStatus.PROCESSING:
-        # Could implement more granular progress tracking
-        progress = 0.5
-    elif job.status == JobStatus.FAILED:
-        progress = 0.0
+        progress = 0.5  # Simple progress for demo
     
     return StatusResponse(
         job_id=job_id,
@@ -244,7 +213,7 @@ async def get_job_result(job_id: str):
     if job.started_at and job.completed_at:
         processing_time = (job.completed_at - job.started_at).total_seconds()
     
-    # Map internal result to API response
+    # Map internal result to API response (matching notebook field names)
     return ResultResponse(
         job_id=job_id,
         status=job.status,
@@ -285,56 +254,3 @@ def _map_anomaly_tags(tags: list) -> list:
     }
     
     return [tag_mapping.get(tag, tag) for tag in tags]
-
-
-@app.delete("/api/jobs/{job_id}")
-async def delete_job(job_id: str):
-    """
-    Delete a job and its results (optional endpoint)
-    """
-    if job_id not in jobs:
-        raise HTTPException(
-            status_code=404,
-            detail="Job not found"
-        )
-    
-    del jobs[job_id]
-    
-    return {"message": "Job deleted successfully"}
-
-
-@app.get("/health")
-async def health_check():
-    """
-    Health check endpoint
-    """
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "jobs_count": len(jobs),
-        "temp_dir": str(TEMP_DIR)
-    }
-
-
-# Cleanup old jobs periodically (optional)
-async def cleanup_old_jobs():
-    """
-    Remove jobs older than 1 hour
-    """
-    while True:
-        await asyncio.sleep(3600)  # Run every hour
-        current_time = datetime.utcnow()
-        jobs_to_remove = []
-        
-        for job_id, job in jobs.items():
-            if (current_time - job.created_at).total_seconds() > 3600:
-                jobs_to_remove.append(job_id)
-        
-        for job_id in jobs_to_remove:
-            del jobs[job_id]
-
-
-# Uncomment to enable automatic cleanup
-# @app.on_event("startup")
-# async def start_cleanup_task():
-#     asyncio.create_task(cleanup_old_jobs())

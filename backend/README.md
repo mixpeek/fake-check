@@ -1,4 +1,4 @@
-# FakeCheck API
+# Deepfake Detection API
 
 A FastAPI-based REST API for detecting deepfakes and AI-generated videos using CLIP, Whisper, and Google Gemini models.
 
@@ -7,67 +7,58 @@ A FastAPI-based REST API for detecting deepfakes and AI-generated videos using C
 - 🎥 Analyzes videos for deepfake indicators
 - 🤖 Uses multiple AI models (CLIP, Whisper, Gemini)
 - ⚡ Asynchronous processing with background jobs
-- 📊 Detailed analysis results with confidence scores
-- 🔄 Progress tracking for long-running analyses
+- 📊 Returns confidence scores and detection labels
 
 ## Prerequisites
 
 - Python 3.9+
 - FFmpeg installed on your system
-- API keys for:
-  - Google Gemini API
-  - HuggingFace (for model downloads)
+- API keys:
+  - Google Gemini API key
+  - HuggingFace token (for model downloads)
 
-## Installation
+## Quick Start
 
-1. Clone the repository and navigate to the project directory:
+1. **Clone and set up the project**:
 ```bash
+# Create the project structure
+mkdir deepfake-detector
 cd deepfake-detector
+
+# Create directories
+mkdir -p app/core
+
+# Copy your existing Python files to app/core/
+# - video.py
+# - models.py
+# - gemini.py
+# - fusion.py
 ```
 
-2. Create a virtual environment:
+2. **Set up environment**:
 ```bash
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
 
-3. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-4. Set up environment variables:
-```bash
+# Set up environment variables
 cp .env.example .env
-# Edit .env and add your API keys
+# Edit .env and add your API keys:
+# GEMINI_API_KEY=your_key_here
+# HF_TOKEN=your_token_here
 ```
 
-5. Create the core modules directory and add your existing Python files:
-```bash
-mkdir -p app/core
-# Copy your existing files:
-# - video.py → app/core/video.py
-# - models.py → app/core/models.py
-# - gemini.py → app/core/gemini.py
-# - fusion.py → app/core/fusion.py
-```
-
-## Running the API
-
-### Simple method:
+3. **Run the server**:
 ```bash
 python run_server.py
 ```
 
-### Using uvicorn directly:
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
 The API will be available at:
-- API endpoint: `http://localhost:8000`
-- Interactive docs: `http://localhost:8000/docs`
-- Alternative docs: `http://localhost:8000/redoc`
+- API: `http://localhost:8000`
+- Docs: `http://localhost:8000/docs`
 
 ## API Usage
 
@@ -75,9 +66,7 @@ The API will be available at:
 
 ```bash
 curl -X POST "http://localhost:8000/api/analyze" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@/path/to/your/video.mp4"
+  -F "file=@/path/to/video.mp4"
 ```
 
 Response:
@@ -92,73 +81,21 @@ Response:
 ### 2. Check job status
 
 ```bash
-curl -X GET "http://localhost:8000/api/status/123e4567-e89b-12d3-a456-426614174000"
-```
-
-Response:
-```json
-{
-  "job_id": "123e4567-e89b-12d3-a456-426614174000",
-  "status": "processing",
-  "progress": 0.5,
-  "created_at": "2024-03-15T10:30:00Z",
-  "started_at": "2024-03-15T10:30:05Z",
-  "completed_at": null,
-  "error": null
-}
+curl "http://localhost:8000/api/status/{job_id}"
 ```
 
 ### 3. Get results
 
 ```bash
-curl -X GET "http://localhost:8000/api/result/123e4567-e89b-12d3-a456-426614174000"
+curl "http://localhost:8000/api/result/{job_id}"
 ```
 
-Response:
-```json
-{
-  "job_id": "123e4567-e89b-12d3-a456-426614174000",
-  "status": "completed",
-  "result": {
-    "id": "video_abc123",
-    "isReal": false,
-    "label": "LIKELY_FAKE",
-    "confidenceScore": 0.25,
-    "processedAt": "2024-03-15T10:35:00Z",
-    "tags": [
-      "Visual Anomaly Detected",
-      "Lip-sync Issue Detected"
-    ],
-    "details": {
-      "visualScore": 0.75,
-      "processingTime": 120.5,
-      "videoLength": 30.0,
-      "originalVideoLength": 45.0,
-      "pipelineVersion": "fastapi_v1",
-      "transcriptSnippet": "Hello, this is a test video...",
-      "geminiChecks": {
-        "visualArtifacts": true,
-        "lipsyncIssue": true,
-        "abnormalBlinks": false
-      }
-    }
-  },
-  "processing_time": 125.3
-}
-```
-
-## Configuration
-
-Edit `.env` file to configure:
-
-- **API Keys**: `GEMINI_API_KEY`, `HF_TOKEN`
-- **Model Settings**: Model names and versions
-- **Processing**: FPS, max video duration, file size limits
-- **Device**: CPU/GPU selection (set `DEVICE=mps` for Apple Silicon)
+Returns detection results with:
+- `label`: "LIKELY_REAL", "UNCERTAIN", or "LIKELY_FAKE"
+- `confidenceScore`: 0-1 (higher means more likely real)
+- `tags`: List of detected anomalies
 
 ## Frontend Integration
-
-The API supports CORS for localhost development. To integrate with your frontend:
 
 ```javascript
 // Submit video
@@ -174,55 +111,48 @@ const { job_id } = await response.json();
 
 // Poll for results
 const checkStatus = async () => {
-  const statusRes = await fetch(`http://localhost:8000/api/status/${job_id}`);
-  const status = await statusRes.json();
+  const res = await fetch(`http://localhost:8000/api/status/${job_id}`);
+  const data = await res.json();
   
-  if (status.status === 'completed') {
-    const resultRes = await fetch(`http://localhost:8000/api/result/${job_id}`);
-    const result = await resultRes.json();
-    // Process result
-  } else if (status.status === 'failed') {
-    // Handle error
-  } else {
-    // Continue polling
-    setTimeout(checkStatus, 2000);
+  if (data.status === 'completed') {
+    const result = await fetch(`http://localhost:8000/api/result/${job_id}`);
+    return await result.json();
   }
+  
+  // Continue polling
+  setTimeout(checkStatus, 2000);
 };
 ```
 
-## Performance Tips
+## Project Structure
 
-1. **Enable model preloading** for faster processing:
-   ```env
-   PRELOAD_MODELS=true
-   ```
+```
+deepfake-detector/
+├── app/
+│   ├── __init__.py
+│   ├── main.py          # FastAPI endpoints
+│   ├── config.py        # Configuration
+│   ├── dependencies.py  # Model loading
+│   ├── pipeline.py      # Detection pipeline
+│   ├── schemas.py       # Data models
+│   └── core/           # Your detection modules
+│       ├── video.py
+│       ├── models.py
+│       ├── gemini.py
+│       └── fusion.py
+├── .env                # API keys (create from .env.example)
+├── requirements.txt
+└── run_server.py
+```
 
-2. **Use GPU acceleration** if available:
-   ```env
-   DEVICE=cuda  # For NVIDIA GPUs
-   DEVICE=mps   # For Apple Silicon
-   ```
+## Notes
 
-3. **Adjust processing parameters**:
-   ```env
-   TARGET_FPS=6  # Lower FPS for faster processing
-   ```
+- Videos longer than 30 seconds are truncated
+- Models are downloaded on first run (may take time)
+- Processing typically takes 60-120 seconds per video
 
 ## Troubleshooting
 
-1. **Models not downloading**: Ensure `HF_TOKEN` is set correctly
-2. **Gemini API errors**: Verify `GEMINI_API_KEY` is valid
-3. **FFmpeg errors**: Ensure FFmpeg is installed: `brew install ffmpeg` (macOS)
-4. **Memory issues**: Reduce batch size or use CPU processing
-
-## Development
-
-To modify the detection pipeline, edit the files in `app/core/`:
-- `video.py`: Video frame/audio extraction
-- `models.py`: CLIP and Whisper processing
-- `gemini.py`: Gemini model checks
-- `fusion.py`: Score fusion logic
-
-## License
-
-This project is part of a deepfake detection demo. See LICENSE for details.
+- **FFmpeg not found**: Install with `brew install ffmpeg` (macOS) or `apt-get install ffmpeg` (Linux)
+- **Model download fails**: Ensure HF_TOKEN is set correctly
+- **Gemini API errors**: Verify GEMINI_API_KEY is valid

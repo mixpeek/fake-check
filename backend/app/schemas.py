@@ -22,7 +22,7 @@ class AnalyzeResponse(BaseModel):
     status: JobStatus = Field(..., description="Current job status")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "message": "Video submitted for analysis",
@@ -42,7 +42,7 @@ class StatusResponse(BaseModel):
     error: Optional[str] = Field(None, description="Error message if failed")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "status": "processing",
@@ -66,7 +66,7 @@ class DetectionResult(BaseModel):
     details: Dict[str, Any] = Field(..., description="Additional technical details")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "video_abc123",
                 "isReal": False,
@@ -102,11 +102,11 @@ class ResultResponse(BaseModel):
     processing_time: Optional[float] = Field(None, description="Total processing time in seconds")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "status": "completed",
-                "result": DetectionResult.Config.schema_extra["example"],
+                "result": DetectionResult.Config.json_schema_extra["example"],
                 "processing_time": 125.3
             }
         }

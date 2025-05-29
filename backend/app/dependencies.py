@@ -1,50 +1,42 @@
 """
-Dependencies for model loading and management
+Model loading for the deepfake detection API
 """
-import asyncio
-from typing import Optional, Dict, Any
 import torch
 import open_clip
 import whisper
 import google.generativeai as genai
 
-from .config import settings
-
+from . import config
 
 # Global model storage
-_models: Optional[Dict[str, Any]] = None
-_models_lock = asyncio.Lock()
+models = {}
 
 
-async def load_models() -> Dict[str, Any]:
+def load_models():
     """
-    Load all required models
+    Load all required models (called once at startup or first request)
     """
-    models = {}
+    global models
     
-    # Configure device
-    device = settings.DEVICE
-    if device == "mps" and not torch.backends.mps.is_available():
-        print("MPS not available, falling back to CPU")
-        device = "cpu"
+    if models:  # Already loaded
+        return models
     
-    print(f"Loading models on device: {device}")
+    print(f"Loading models on device: {config.DEVICE}")
     
     # Load CLIP model
     try:
         print("Loading CLIP model...")
         clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
-            settings.CLIP_MODEL_NAME,
-            pretrained=settings.CLIP_PRETRAINED,
-            device=device,
-            cache_dir=str(settings.MODEL_CACHE_DIR / "clip")
+            config.CLIP_MODEL_NAME,
+            pretrained=config.CLIP_PRETRAINED,
+            device=config.DEVICE
         )
         clip_model.eval()
         models["clip_model"] = clip_model
         models["clip_preprocess"] = clip_preprocess
-        print("✅ CLIP model loaded successfully")
+        print("✅ CLIP Model (ViT-L-14) loaded.")
     except Exception as e:
-        print(f"❌ Failed to load CLIP model: {e}")
+        print(f"❌ Error loading CLIP model: {e}")
         models["clip_model"] = None
         models["clip_preprocess"] = None
     
@@ -52,60 +44,38 @@ async def load_models() -> Dict[str, Any]:
     try:
         print("Loading Whisper model...")
         whisper_model = whisper.load_model(
-            settings.WHISPER_MODEL_NAME,
-            device=device,
-            download_root=str(settings.MODEL_CACHE_DIR / "whisper")
+            config.WHISPER_MODEL_NAME,
+            device=config.DEVICE
         )
         models["whisper_model"] = whisper_model
-        print("✅ Whisper model loaded successfully")
+        print("✅ Whisper Model (base.en) loaded.")
     except Exception as e:
-        print(f"❌ Failed to load Whisper model: {e}")
+        print(f"❌ Error loading Whisper model: {e}")
         models["whisper_model"] = None
     
     # Initialize Gemini model
-    if settings.GEMINI_API_KEY:
+    if config.GEMINI_API_KEY:
         try:
             print("Initializing Gemini model...")
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL_NAME)
+            genai.configure(api_key=config.GEMINI_API_KEY)
+            gemini_model = genai.GenerativeModel(config.GEMINI_MODEL_NAME)
             models["gemini_model"] = gemini_model
-            print("✅ Gemini model initialized successfully")
+            print(f"✅ Gemini Model ('{config.GEMINI_MODEL_NAME}') initialized for generative tasks.")
         except Exception as e:
-            print(f"❌ Failed to initialize Gemini model: {e}")
+            print(f"❌ Error initializing Gemini model: {e}")
             models["gemini_model"] = None
     else:
         print("⚠️ Gemini API key not provided, skipping Gemini model")
         models["gemini_model"] = None
     
     # Store device for reference
-    models["device"] = device
+    models["device"] = config.DEVICE
     
     return models
 
 
-async def get_models() -> Dict[str, Any]:
+async def get_models():
     """
-    Get loaded models (singleton pattern)
+    Get loaded models (async wrapper for compatibility)
     """
-    global _models
-    
-    async with _models_lock:
-        if _models is None:
-            _models = await load_models()
-    
-    return _models
-
-
-def cleanup_models():
-    """
-    Cleanup loaded models to free memory
-    """
-    global _models
-    
-    if _models is not None:
-        # Clear CUDA cache if using GPU
-        if _models.get("device") == "cuda":
-            torch.cuda.empty_cache()
-        
-        _models = None
-        print("Models cleaned up")
+    return load_models()

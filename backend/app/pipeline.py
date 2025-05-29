@@ -1,38 +1,26 @@
 """
-Main detection pipeline
+Main detection pipeline adapted from the notebook
 """
 import os
-import sys
 import uuid
 from typing import Dict, Any, List, Optional
 from PIL import Image
 
-# Add the core modules to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'core'))
-
-# Import core modules
+# Import core modules (these are your original files)
 from .core import video
 from .core import models
 from .core import gemini
 from .core import fusion
-from .config import settings
+from . import config
 
 
 async def run_detection_pipeline(
     video_path: str,
-    models: Dict[str, Any],
+    models_dict: Dict[str, Any],
     job_id: str
 ) -> Dict[str, Any]:
     """
-    Main deepfake detection pipeline
-    
-    Args:
-        video_path: Path to the video file
-        models: Dictionary containing loaded models
-        job_id: Unique job identifier
-        
-    Returns:
-        Detection results dictionary
+    Main deepfake detection pipeline - matches notebook implementation
     """
     video_basename = os.path.basename(video_path)
     run_id = f"{os.path.splitext(video_basename)[0]}_{job_id[:6]}"
@@ -40,7 +28,7 @@ async def run_detection_pipeline(
     detection_results = {
         "input_video": video_basename,
         "run_id": run_id,
-        "pipeline_version": "fastapi_v1"
+        "pipeline_version": "simplified_v1_cloud_vision_blinks"  # Match notebook
     }
     
     temp_audio_path: Optional[str] = None
@@ -49,26 +37,26 @@ async def run_detection_pipeline(
     try:
         print(f"\nProcessing: {video_basename}")
         
-        # 1. Sample Video & Audio
+        # 1. Sample Video & Audio (exactly as notebook)
         processed_frames_pil, temp_audio_path, original_duration, processed_duration = \
             video.sample_video_content(
                 video_path,
-                target_fps=settings.TARGET_FPS,
-                max_duration_sec=settings.MAX_VIDEO_DURATION_SEC
+                target_fps=config.TARGET_FPS,
+                max_duration_sec=config.MAX_VIDEO_DURATION_SEC
             )
         
         detection_results["video_original_duration_sec"] = round(original_duration, 2)
         detection_results["video_processed_duration_sec"] = round(processed_duration, 2)
-        detection_results["num_frames_sampled"] = len(processed_frames_pil)
+        detection_results["num_frames_sampled_for_clip_whisper"] = len(processed_frames_pil)
         
         if not processed_frames_pil:
             raise RuntimeError("Frame sampling returned no frames.")
         
         # 2. CLIP Visual Score
-        score_visual_clip = 0.0
-        clip_model = models.get("clip_model")
-        clip_preprocess = models.get("clip_preprocess")
-        device = models.get("device", "cpu")
+        score_visual_clip = 0.0  # Default if model fails
+        clip_model = models_dict.get("clip_model")
+        clip_preprocess = models_dict.get("clip_preprocess")
+        device = models_dict.get("device", "cpu")
         
         if clip_model and clip_preprocess:
             score_visual_clip = models.calculate_visual_clip_score(
@@ -78,7 +66,7 @@ async def run_detection_pipeline(
         
         # 3. Whisper ASR
         transcription_text = ""
-        whisper_model = models.get("whisper_model")
+        whisper_model = models_dict.get("whisper_model")
         
         if whisper_model and temp_audio_path:
             transcription_data = models.transcribe_audio_content(
@@ -90,23 +78,19 @@ async def run_detection_pipeline(
             else "[No Speech/Audio Error]"
         )
         
-        # 4. Gemini Inspections
-        flag_gemini_visual, flag_gemini_lipsync, flag_gemini_blinks = 0, 0, 0
-        gemini_model = models.get("gemini_model")
+        # 4. Gemini Inspections (Visual, Lipsync, AND Blinks)
+        flag_gemini_visual, flag_gemini_lipsync, flag_gemini_blinks = 0, 0, 0  # Defaults
+        gemini_model = models_dict.get("gemini_model")
         
         if gemini_model:
+            # Use gemini module exactly as notebook
             flag_gemini_visual, flag_gemini_lipsync, flag_gemini_blinks = \
                 await gemini.run_gemini_inspections(
                     processed_frames_pil, 
                     video_path, 
                     transcription_text, 
-                    gemini_model,
-                    # Enable all checks by default
-                    enable_visual_artifacts=True,
-                    enable_lipsync=True,
-                    enable_abnormal_blinks=True
+                    gemini_model
                 )
-        
         detection_results["flag_gemini_visual_artifact"] = flag_gemini_visual
         detection_results["flag_gemini_lipsync_issue"] = flag_gemini_lipsync
         detection_results["flag_gemini_abnormal_blinks"] = flag_gemini_blinks
@@ -116,9 +100,8 @@ async def run_detection_pipeline(
             score_visual_clip,
             flag_gemini_visual,
             flag_gemini_lipsync,
-            flag_gemini_blinks
+            flag_gemini_blinks  # Pass the new Gemini blink flag
         )
-        
         detection_results["deepfake_confidence_overall"] = final_confidence
         detection_results["final_predicted_label"] = final_label
         detection_results["anomaly_tags_detected"] = anomaly_tags_list
@@ -128,10 +111,6 @@ async def run_detection_pipeline(
         error_message = f"Pipeline error for {video_basename}: {str(e)}"
         print(f"{error_message}\n{traceback.format_exc()}")
         detection_results["error"] = error_message
-        # Set defaults for failed analysis
-        detection_results["deepfake_confidence_overall"] = 0.5
-        detection_results["final_predicted_label"] = "UNCERTAIN"
-        detection_results["anomaly_tags_detected"] = []
         
     finally:
         # Clean up temporary audio file
