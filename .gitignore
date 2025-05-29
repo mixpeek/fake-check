@@ -1,6 +1,7 @@
-*.mp4
+backend/videos_for_testing/
 .DS_Store
 .env
 
 venv/
 **/__pycache__/
+frontend/package-lock.json
