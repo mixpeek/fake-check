@@ -65,21 +65,20 @@ async def run_detection_pipeline(
         detection_results["score_visual_clip"] = round(score_visual_clip, 3)
         
         # 3. Whisper ASR
-        transcription_text = ""
+        transcription_data = {"text": "", "words": []}
         whisper_model = models_dict.get("whisper_model")
         
         if whisper_model and temp_audio_path:
             transcription_data = models.transcribe_audio_content(
                 temp_audio_path, whisper_model
             )
-            transcription_text = transcription_data["text"]
         detection_results["transcript_snippet"] = (
-            transcription_text[:150] + "..." if transcription_text 
+            transcription_data["text"][:150] + "..." if transcription_data["text"] 
             else "[No Speech/Audio Error]"
         )
         
         # 4. Gemini Inspections (Visual, Lipsync, AND Blinks)
-        flag_gemini_visual, flag_gemini_lipsync, flag_gemini_blinks = 0, 0, 0  # Defaults
+        flag_gemini_visual, flag_gemini_lipsync, flag_gemini_blinks = 0, 0, 0
         gemini_model = models_dict.get("gemini_model")
         
         if gemini_model:
@@ -88,7 +87,7 @@ async def run_detection_pipeline(
                 await gemini.run_gemini_inspections(
                     processed_frames_pil, 
                     video_path, 
-                    transcription_text, 
+                    transcription_data,  # Pass full transcription data
                     gemini_model
                 )
         detection_results["flag_gemini_visual_artifact"] = flag_gemini_visual

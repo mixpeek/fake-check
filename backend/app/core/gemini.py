@@ -1,6 +1,6 @@
 # gemini.py  
 
-import os, sys, base64, tempfile, asyncio, functools
+import os, sys, base64, tempfile, asyncio, functools, logging
 from typing import List, Tuple, Any, Dict
 from io import BytesIO
 import time, requests                         
@@ -8,6 +8,10 @@ import time, requests
 import ffmpeg
 from PIL import Image
 from google.api_core import exceptions as _gax_exc
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 GEMINI_PY_VERSION = "1.7_full_flags_async_fix"
 
@@ -91,7 +95,7 @@ async def gemini_check_visual_artifacts(frames: List[Image.Image], model) -> int
     if not model or not frames:
         return 0
     prompt = ("Examine these frames. Do you see clear visual artifacts or "
-              "distortions that strongly suggest AI deepfake? YES / NO.")
+              "distortions that strongly suggest AI deepfake? YES / NO. Only respond with YES or NO.")
     parts = [prompt] + [
         {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
         for f in _pick_frames(frames)
@@ -111,7 +115,7 @@ async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
     if not model or not frames:
         return 0
     prompt = ("Inspect the eyes in these frames. Is the blinking pattern "
-              "abnormal or unnatural? Respond YES / NO.")
+              "abnormal or unnatural? Respond YES / NO. Only respond with YES or NO.")
     parts = [prompt] + [
         {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
         for f in _pick_frames(frames)
@@ -134,28 +138,77 @@ async def gemini_check_lipsync(video_path: str, transcript: str,
 
     tmp_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
     try:
+        # Get video duration
         duration = float((await _run_ffmpeg_probe(video_path))
                          ["format"]["duration"])
-        clip_len = min(2.0, duration)
-        start = max(0.0, (duration - clip_len) / 2.0)
-        await _run_ffmpeg_extract(video_path, start, clip_len, tmp_clip)
+        logger.debug(f"[{fn}] Full video duration: {duration:.2f}s")
+        
+        # Find first 2-second segment with speech
+        clip_len = 2.0  # Fixed 2-second clip length
+        start_time = 0.0
+        transcript_segment = ""
+        
+        if isinstance(transcript, dict) and "words" in transcript:
+            # Find first segment with enough speech
+            words = transcript["words"]
+            if not words:
+                logger.warning(f"[{fn}] No words found in transcript")
+                return 0
+                
+            # Find first word
+            first_word_start = words[0]["start"]
+            logger.debug(f"[{fn}] First word starts at {first_word_start:.2f}s: '{words[0]['word']}'")
+            
+            # Find last word that fits within 2 seconds after first word
+            end_time = first_word_start + clip_len
+            words_in_segment = [
+                word["word"] for word in words
+                if first_word_start <= word["start"] <= end_time
+            ]
+            
+            if not words_in_segment:
+                logger.warning(f"[{fn}] No words found in first 2 seconds")
+                return 0
+                
+            start_time = first_word_start
+            transcript_segment = " ".join(words_in_segment)
+            logger.info(f"[{fn}] Extracting clip from {start_time:.2f}s to {end_time:.2f}s")
+            logger.info(f"[{fn}] Transcript segment: '{transcript_segment}'")
+        else:
+            # Fallback to using the first 2 seconds if no word timestamps
+            transcript_segment = transcript[:500]
+            logger.warning(f"[{fn}] No word timestamps, using first 2 seconds")
+        
+        # Extract the video segment
+        logger.debug(f"[{fn}] Extracting video clip to {tmp_clip}")
+        await _run_ffmpeg_extract(video_path, start_time, clip_len, tmp_clip)
+        
+        # Verify clip was created and has content
+        if os.path.exists(tmp_clip):
+            clip_size = os.path.getsize(tmp_clip)
+            logger.debug(f"[{fn}] Extracted clip size: {clip_size/1024:.1f}KB")
+        else:
+            logger.error(f"[{fn}] Failed to create clip file")
+            return 0
 
+        # Send to Gemini
         clip_b64 = base64.b64encode(open(tmp_clip, "rb").read()).decode()
-        prompt = ("Watch the clip and read the text. Are lip motions synced "
-                  "with the speech? YES / NO.")
+        prompt = ("Watch the clip and read the corresponding transcript provided. Are lip motions synced "
+                  "with the speech? YES / NO. Only respond with YES or NO.")
         parts = [prompt,
                  {"mime_type": "video/mp4", "data": clip_b64},
-                 {"text": transcript[:500]}]
+                 {"text": transcript_segment}]
 
         resp = await safe_generate_content(model, parts)
         text = _extract_text(resp, fn)
         
-        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+        logger.info(f"[{fn}] Gemini response: {text}")
         
         # Return 1 for mismatch
         return 1 if "NO" in text else 0
     except Exception as e:
-        _log_exc(fn, e); return 0
+        logger.error(f"[{fn}] Error: {str(e)}", exc_info=True)
+        return 0
     finally:
         if os.path.exists(tmp_clip):
             os.remove(tmp_clip)

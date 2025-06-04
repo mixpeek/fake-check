@@ -4,4 +4,5 @@ backend/videos_for_testing/
 
 venv/
 **/__pycache__/
-frontend/package-lock.json
+*/package-lock.json
+**.zip

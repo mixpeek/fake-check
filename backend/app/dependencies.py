@@ -5,6 +5,7 @@ import torch
 import open_clip
 import whisper
 import google.generativeai as genai
+import sys
 
 from . import config
 
@@ -19,6 +20,7 @@ def load_models():
     global models
     
     if models:  # Already loaded
+        print("Models already loaded, reusing existing instances", file=sys.stderr)
         return models
     
     print(f"Loading models on device: {config.DEVICE}")
@@ -34,7 +36,7 @@ def load_models():
         clip_model.eval()
         models["clip_model"] = clip_model
         models["clip_preprocess"] = clip_preprocess
-        print("✅ CLIP Model (ViT-L-14) loaded.")
+        print(f"✅ CLIP Model (ViT-L-14) loaded. Model ID: {id(clip_model)}", file=sys.stderr)
     except Exception as e:
         print(f"❌ Error loading CLIP model: {e}")
         models["clip_model"] = None

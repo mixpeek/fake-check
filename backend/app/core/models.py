@@ -29,7 +29,7 @@ FAKE_PERSON_PROMPTS_CLIP = [
     "an unnaturally smooth face, puppet-like movements, or a face that seems digitally overlaid"
 ]
 
-_cached_clip_text_features = {} # Cache for text features
+_cached_clip_text_features = {}  # Global cache
 
 @torch.inference_mode()
 def calculate_visual_clip_score(
@@ -41,9 +41,10 @@ def calculate_visual_clip_score(
     if not pil_frames: return 0.0
     
     global _cached_clip_text_features
-    # Check if device has changed or cache is empty, to recompute text features if necessary
-    # This simple cache assumes the model and prompts don't change per call for a given device.
-    cache_key = device 
+    # Create a more unique cache key using model ID and device
+    cache_key = f"{id(clip_model)}_{device}"
+    print(f"CLIP Debug: Processing {len(pil_frames)} frames on {device}", file=sys.stderr)
+    
     if cache_key not in _cached_clip_text_features:
         print("Tokenizing and encoding CLIP text prompts...", file=sys.stderr)
         with torch.no_grad():
@@ -56,6 +57,7 @@ def calculate_visual_clip_score(
             current_cache['real'] /= current_cache['real'].norm(dim=-1, keepdim=True)
             current_cache['fake'] /= current_cache['fake'].norm(dim=-1, keepdim=True)
             _cached_clip_text_features[cache_key] = current_cache
+            print(f"CLIP Debug: Cached text features for model {id(clip_model)}", file=sys.stderr)
     
     real_text_features = _cached_clip_text_features[cache_key]['real']
     fake_text_features = _cached_clip_text_features[cache_key]['fake']
@@ -72,7 +74,7 @@ def calculate_visual_clip_score(
     if not all_image_features_list: return 0.0
     all_image_features = torch.cat(all_image_features_list)
 
-    real_sims = all_image_features @ real_text_features.T 
+    real_sims = all_image_features @ real_text_features.T
     avg_real_sim_per_frame = real_sims.mean(dim=1) 
 
     fake_sims = all_image_features @ fake_text_features.T 
@@ -83,7 +85,9 @@ def calculate_visual_clip_score(
     
     # Apply scaling and sigmoid. The scaling factor (5.0) is empirical and might need tuning.
     scaled_score = differential_scores.quantile(0.90).item() * 5.0 
-    return sigmoid(scaled_score)
+    final_score = sigmoid(scaled_score)
+    print(f"CLIP Debug: Final score: {final_score:.3f} (scaled: {scaled_score:.3f})", file=sys.stderr)
+    return final_score
 
 
 # Whisper ASR Model & Transcription

@@ -23,13 +23,14 @@ def main():
     print("📚 API docs available at: http://localhost:8000/docs")
     print()
     
-    # Run the server
+    # Run the server with debug logging
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="info"
+        log_level="debug",
+        access_log=True
     )
 
 
