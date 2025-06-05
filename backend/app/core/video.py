@@ -1,14 +1,65 @@
 # df_utils_video.py
 
-import os
+import os, json, tempfile
 import sys
 import tempfile
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any, List
 
 import ffmpeg
 import cv2
 import numpy as np
 from PIL import Image
+
+from google.cloud import videointelligence_v1 as vi
+
+def extract_audio(video_path: str, duration_to_process: Optional[float] = None) -> Optional[str]:
+    """
+    Extracts audio from a video file and saves it as a temporary WAV file.
+
+    Args:
+        video_path: Path to the input video file.
+        duration_to_process: Optional duration in seconds to extract. 
+                             If None, extracts the full audio.
+
+    Returns:
+        Path to the temporary WAV file, or None if extraction fails.
+    """
+    if not os.path.exists(video_path):
+        print(f"Error: Video file not found for audio extraction: {video_path}", file=sys.stderr)
+        return None
+
+    temp_wav_fd, temp_wav_path = tempfile.mkstemp(suffix=".wav")
+    os.close(temp_wav_fd) 
+
+    try:
+        input_stream = ffmpeg.input(video_path)
+        if duration_to_process is not None:
+            input_stream = input_stream.output(
+                temp_wav_path, ac=1, ar=16000, acodec='pcm_s16le', t=duration_to_process
+            )
+        else:
+            input_stream = input_stream.output(
+                temp_wav_path, ac=1, ar=16000, acodec='pcm_s16le'
+            )
+        
+        input_stream.overwrite_output().run(capture_stdout=True, capture_stderr=True, quiet=True)
+        
+        if os.path.exists(temp_wav_path) and os.path.getsize(temp_wav_path) > 0:
+            return temp_wav_path
+        else:
+            print(f"Warning: FFmpeg audio extraction produced an empty file for {video_path}.", file=sys.stderr)
+            if os.path.exists(temp_wav_path): os.remove(temp_wav_path)
+            return None
+
+    except ffmpeg.Error as e:
+        stderr_msg = e.stderr.decode('utf8', errors='ignore') if e.stderr else "No stderr"
+        print(f"Warning: FFmpeg audio extraction failed for {video_path}: {stderr_msg}.", file=sys.stderr)
+        if os.path.exists(temp_wav_path): # Clean up potentially empty/corrupt file
+            try: 
+                os.remove(temp_wav_path)
+            except OSError: 
+                pass
+        return None
 
 def _ffmpeg_extract_frames_raw(
     path: str, 
@@ -198,3 +249,53 @@ def sample_video_content(
     pil_frames = pil_frames[:max_frames_to_sample]
 
     return pil_frames, temp_wav_path, actual_total_duration, processed_duration_sec
+
+def detect_lighting_jumps(video_path: str) -> Dict[str, Any]:
+    client = vi.VideoIntelligenceServiceClient()
+    features = [
+        vi.Feature.SHOT_CHANGE_DETECTION,
+        vi.Feature.LABEL_DETECTION,
+        vi.Feature.PERSON_DETECTION,
+    ]
+
+    with open(video_path, "rb") as f:
+        input_content = f.read()
+
+    annot = client.annotate_video(
+        request=vi.AnnotateVideoRequest(
+            features=features,
+            input_content=input_content,
+            video_context=vi.VideoContext(
+                label_detection_config=vi.LabelDetectionConfig(
+                    label_detection_mode=vi.LabelDetectionMode.SHOT_MODE
+                )
+            ),
+        )
+    ).result(timeout=300)
+
+    shot_annotations = (
+        annot.annotation_results[0].shot_annotations
+        if annot.annotation_results else []
+    )
+
+    events = []
+    for shot in shot_annotations:
+        start = shot.start_time_offset.total_seconds()
+        end   = shot.end_time_offset.total_seconds()
+        dur   = round(end - start, 2)
+        # flag super-short non-fade shots (< 0.5 s) as suspicious
+        if dur < 0.5:
+            events.append({
+                "module": "video_ai",
+                "event": "odd_shot",
+                "ts": round(start, 2),
+                "dur": dur,
+                "meta": {"duration": dur}
+            })
+
+    return {
+        "score": 0.10 if events else 0.0,
+        "anomaly": bool(events),
+        "tags": ["odd_shot"] if events else [],
+        "events": events
+    }

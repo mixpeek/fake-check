@@ -40,3 +40,13 @@ opencv-python-headless==4.9.0.80
 # Async support
 nest-asyncio==1.6.0
 aiofiles==23.2.1
+
+langdetect>=1.0.9
+librosa>=0.10.1
+soundfile>=0.12
+scikit-image==0.21.0
+scipy>=1.13
+
+# ───────── Google Cloud ─────────
+google-cloud-vision>=3.6
+google-cloud-videointelligence>=2.11

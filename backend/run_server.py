@@ -5,6 +5,16 @@ Simple server runner for the deepfake detection API
 import os
 import uvicorn
 from pathlib import Path
+import logging
+
+# Configure logging to reduce verbosity from noisy libraries
+logging.basicConfig(level=logging.INFO)
+noisy_loggers = [
+    "numba", "h5py", "torio", "torchaudio", 
+    "urllib3", "filelock", "grpc", "asyncio"
+]
+for logger_name in noisy_loggers:
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 
 def main():
@@ -29,7 +39,7 @@ def main():
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="debug",
+        log_level="info",
         access_log=True
     )
 

@@ -219,10 +219,10 @@ async def get_job_result(job_id: str):
         status=job.status,
         result={
             "id": job.result.get("run_id", job_id),
-            "isReal": job.result["final_predicted_label"] == "LIKELY_REAL",
-            "label": job.result["final_predicted_label"],
-            "confidenceScore": 1.0 - job.result["deepfake_confidence_overall"],  # Invert for intuitive score
-            "processedAt": job.completed_at.isoformat() + "Z",
+            "isReal": job.result.get("final_predicted_label", "ERROR_IN_PROCESSING") == "LIKELY_REAL",
+            "label": job.result.get("final_predicted_label", "ERROR_IN_PROCESSING"),
+            "confidenceScore": 1.0 - job.result.get("deepfake_confidence_overall", 0.0),  # Invert for intuitive score
+            "processedAt": job.completed_at.isoformat() + "Z" if job.completed_at else "N/A",
             "tags": _map_anomaly_tags(job.result.get("anomaly_tags_detected", [])),
             "details": {
                 "visualScore": job.result.get("score_visual_clip", 0.0),
@@ -230,13 +230,17 @@ async def get_job_result(job_id: str):
                 "videoLength": job.result.get("video_processed_duration_sec", 0.0),
                 "originalVideoLength": job.result.get("video_original_duration_sec", 0.0),
                 "pipelineVersion": job.result.get("pipeline_version", "unknown"),
-                "transcriptSnippet": job.result.get("transcript_snippet", ""),
+                "transcriptSnippet": job.result.get("transcript_snippet", "N/A"),
                 "geminiChecks": {
                     "visualArtifacts": bool(job.result.get("flag_gemini_visual_artifact", 0)),
                     "lipsyncIssue": bool(job.result.get("flag_gemini_lipsync_issue", 0)),
                     "abnormalBlinks": bool(job.result.get("flag_gemini_abnormal_blinks", 0))
-                }
-            }
+                },
+                "heuristicChecks": job.result.get("heuristicChecks", {}),
+                "error_message": job.result.get("error"),
+                "error_trace": job.result.get("trace")
+            },
+            "events": job.result.get("events", [])
         },
         processing_time=processing_time
     )
