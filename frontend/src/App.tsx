@@ -55,7 +55,10 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                <DetectionResult result={currentVideo.result} />
+                <DetectionResult 
+                  result={currentVideo.result} 
+                  videoUrl={currentVideo.thumbnailUrl}
+                />
               </motion.div>
             )}
             

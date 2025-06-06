@@ -341,7 +341,7 @@ async def gemini_detect_gibberish(
                 gibberish_found_count += 1
                 ts = round(original_idx / fps, 2)
                 events.append({
-                    "module": "ocr",
+                    "module": "gibberish_text",
                     "event": "gibberish_text_detected",
                     "ts": ts,
                     "dur": 0.0,
@@ -380,7 +380,7 @@ async def run_gemini_inspections(
 ) -> Tuple[int, int, int, float, List[Dict[str, Any]]]:
     """
     Runs all desired Gemini checks.  Returns:
-        (visual_flag, lipsync_flag, blink_flag, ocr_score, all_gemini_events)
+        (visual_flag, lipsync_flag, blink_flag, gibberish_score, all_gemini_events)
     """
     fn_orchestrator = "run_gemini_inspections"
     logger.info(f"[{fn_orchestrator}] Starting inspections.")
@@ -406,7 +406,7 @@ async def run_gemini_inspections(
     if enable_ocr_gibberish:
         logger.info(f"[{fn_orchestrator}] Preparing gemini_detect_gibberish task.")
         tasks_coroutines.append(gemini_detect_gibberish(frames, fps=fps, model=model))
-        keys.append("ocr")
+        keys.append("gibberish")
 
     if not tasks_coroutines:
         logger.warning(f"[{fn_orchestrator}] No tasks enabled. Returning default values.")
@@ -429,7 +429,7 @@ async def run_gemini_inspections(
 
     vis = blink = 0
     lip_flag = 0
-    ocr_score_val = 0.0
+    gibberish_score_val = 0.0
     all_gemini_events: List[Dict[str, Any]] = []
 
     for i, (key, res) in enumerate(zip(keys, results_list)):
@@ -440,7 +440,7 @@ async def run_gemini_inspections(
             if key == "vis": vis = 0
             elif key == "lip": lip_flag = 0
             elif key == "blink": blink = 0
-            elif key == "ocr": ocr_score_val = 0.0
+            elif key == "gibberish": gibberish_score_val = 0.0
             continue
 
         if key == "vis":
@@ -459,16 +459,16 @@ async def run_gemini_inspections(
         elif key == "blink":
             blink = res
             logger.info(f"[{fn_orchestrator}] Result for 'blink': {blink}")
-        elif key == "ocr":
+        elif key == "gibberish":
             if isinstance(res, dict): # Ensure res is a dict as expected
-                ocr_dict = res
-                ocr_score_val = ocr_dict.get("score", 0.0)
-                ocr_events_from_module = ocr_dict.get("events", [])
-                all_gemini_events.extend(ocr_events_from_module)
-                logger.info(f"[{fn_orchestrator}] Result for 'ocr': score={ocr_score_val}, events_count={len(ocr_events_from_module)}")
+                gibberish_dict = res
+                gibberish_score_val = gibberish_dict.get("score", 0.0)
+                gibberish_events_from_module = gibberish_dict.get("events", [])
+                all_gemini_events.extend(gibberish_events_from_module)
+                logger.info(f"[{fn_orchestrator}] Result for 'gibberish': score={gibberish_score_val}, events_count={len(gibberish_events_from_module)}")
             else:
-                logger.error(f"[{fn_orchestrator}] Unexpected result type for 'ocr': {type(res)}. Expected dict. Setting score to 0.")
-                ocr_score_val = 0.0
+                logger.error(f"[{fn_orchestrator}] Unexpected result type for 'gibberish': {type(res)}. Expected dict. Setting score to 0.")
+                gibberish_score_val = 0.0
 
-    logger.info(f"[{fn_orchestrator}] Finished processing all results. Returning: vis={vis}, lip_flag={lip_flag}, blink={blink}, ocr_score={ocr_score_val}, num_events={len(all_gemini_events)}")
-    return vis, lip_flag, blink, ocr_score_val, all_gemini_events
+    logger.info(f"[{fn_orchestrator}] Finished processing all results. Returning: vis={vis}, lip_flag={lip_flag}, blink={blink}, gibberish_score={gibberish_score_val}, num_events={len(all_gemini_events)}")
+    return vis, lip_flag, blink, gibberish_score_val, all_gemini_events

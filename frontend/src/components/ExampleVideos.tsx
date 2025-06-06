@@ -14,22 +14,22 @@ const exampleVideos: ExampleVideo[] = [
   {
     id: '1',
     title: 'AI Generated Speech',
-    path: '/videos/example1.mp4',
-    thumbnail: '/videos/example1.mp4',
+    path: '/videos/example-1.mp4',
+    thumbnail: '/videos/example-1.mp4',
     duration: '0:15'
   },
   {
     id: '2',
     title: 'Deepfake Example',
-    path: '/videos/example2.mp4',
-    thumbnail: '/videos/example2.mp4',
+    path: '/videos/example-2.mp4',
+    thumbnail: '/videos/example-2.mp4',
     duration: '0:30'
   },
   {
     id: '3',
     title: 'Real Video Reference',
-    path: '/videos/example3.mp4',
-    thumbnail: '/videos/example3.mp4',
+    path: '/videos/example-3.mp4',
+    thumbnail: '/videos/example-3.mp4',
     duration: '0:20'
   }
 ];
@@ -41,7 +41,6 @@ interface ExampleVideosProps {
 export const ExampleVideos: React.FC<ExampleVideosProps> = ({ onSelect }) => {
   const handleVideoSelect = async (video: ExampleVideo) => {
     try {
-      // Fetch the video file and create a File object
       const response = await fetch(video.path);
       const blob = await response.blob();
       const file = new File([blob], `example-${video.id}.mp4`, { type: 'video/mp4' });

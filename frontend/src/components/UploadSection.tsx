@@ -27,8 +27,9 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   const handleDragLeave = () => setIsDragOver(false);
   const handleDrop = () => setIsDragOver(false);
 
-  const handleExampleSelect = async (file: File) => {
-    onFileSelect(file);
+  const handleExampleSelect = (videoId: string) => {
+    const mockFile = new File([""], `example-${videoId}.mp4`, { type: "video/mp4" });
+    onFileSelect(mockFile);
   };
 
   return (
@@ -107,7 +108,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             onFileSelect={onFileSelect}
             isDisabled={isProcessing}
             isProcessing={isProcessing}
-            maxFileSizeMB={120}
+            maxFileSizeMB={30}
             className="h-64"
           />
           <ExampleVideos onSelect={handleExampleSelect} />

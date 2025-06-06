@@ -97,27 +97,39 @@ def transcribe_audio_content(
 ) -> Dict[str, Any]:
     if not wav_path or not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
         print("Warning: WAV file for transcription is missing, empty, or path is None.", file=sys.stderr)
-        return {"text": "", "words": []}
+        return {"text": "", "words": [], "avg_no_speech_prob": 1.0}
     
     device = next(whisper_model.parameters()).device # Get device from model
     try:
+        # Set verbose=None to get segment-level details like no_speech_prob
         transcription_result = whisper_model.transcribe(
-            wav_path, fp16=(str(device) == "cuda"), word_timestamps=True, verbose=False # Ensure fp16 is boolean
+            wav_path, fp16=(str(device) == "cuda"), word_timestamps=True, verbose=None
         )
     except Exception as e:
         print(f"Error during Whisper transcription for {wav_path}: {e}", file=sys.stderr)
         import traceback # Moved import here for when it's actually needed
         print(traceback.format_exc(), file=sys.stderr) 
-        return {"text": "", "words": []}
+        return {"text": "", "words": [], "avg_no_speech_prob": 1.0}
     
     word_segments = []
     full_transcribed_text = transcription_result.get("text", "").strip()
+    
+    # Calculate average no_speech_prob from all segments
+    segment_data = transcription_result.get("segments", [])
+    avg_no_speech_prob = 0.0
+    if segment_data:
+        no_speech_probs = [s.get('no_speech_prob', 0.0) for s in segment_data]
+        if no_speech_probs:
+            avg_no_speech_prob = sum(no_speech_probs) / len(no_speech_probs)
+    else: # If there are no segments, it's effectively silent
+        avg_no_speech_prob = 1.0
+
     # Ensure segments and words exist before iterating
-    for segment in transcription_result.get("segments", []):
+    for segment in segment_data:
         for word_info in segment.get("words", []): # Check if 'words' key exists in segment
             word_segments.append({
                 "word": word_info.get("word", "").strip(), # Strip whitespace from word
                 "start": word_info.get("start", 0.0),
                 "end": word_info.get("end", 0.0)
             })
-    return {"text": full_transcribed_text, "words": word_segments}
+    return {"text": full_transcribed_text, "words": word_segments, "avg_no_speech_prob": avg_no_speech_prob}

@@ -2,9 +2,6 @@ import { AnalyzedVideo, DetectionResult, DetectionTag, DetectionLabel } from '..
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-// Helper to simulate network delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const uploadVideo = async (
   file: File, 
   onProgress: (progress: number) => void
@@ -24,7 +21,7 @@ export const uploadVideo = async (
   const data = await response.json();
   return {
     id: data.job_id,
-    url: URL.createObjectURL(file) // Create local preview URL
+    url: URL.createObjectURL(file)
   };
 };
 
@@ -33,6 +30,9 @@ export const checkStatus = async (jobId: string): Promise<{
   progress: number;
 }> => {
   const response = await fetch(`${API_BASE_URL}/status/${jobId}`);
+  if (!response.ok) {
+    throw new Error('Failed to check status');
+  }
   return response.json();
 };
 
@@ -46,20 +46,28 @@ export const getResults = async (jobId: string): Promise<DetectionResult> => {
   const result = data.result;
 
   return {
+    id: result.id,
+    isReal: result.isReal,
     label: result.label as DetectionLabel,
     confidenceScore: result.confidenceScore,
     tags: result.tags,
-    processedAt: new Date().toLocaleString(),
+    processedAt: result.processedAt,
     details: {
       visualScore: result.details.visualScore,
+      processingTime: result.details.processingTime,
       videoLength: result.details.videoLength,
       originalVideoLength: result.details.originalVideoLength,
+      pipelineVersion: result.details.pipelineVersion,
       transcriptSnippet: result.details.transcriptSnippet,
       geminiChecks: {
         visualArtifacts: result.details.geminiChecks.visualArtifacts,
         lipsyncIssue: result.details.geminiChecks.lipsyncIssue,
         abnormalBlinks: result.details.geminiChecks.abnormalBlinks
-      }
+      },
+      heuristicChecks: result.details.heuristicChecks,
+      error_message: result.details.error_message,
+      error_trace: result.details.error_trace,
+      events: result.events
     }
   };
 };
@@ -74,6 +82,6 @@ export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
       throw new Error('Analysis failed');
     }
     
-    await delay(2000); // Poll every 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
   }
 };

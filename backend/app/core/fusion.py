@@ -6,11 +6,11 @@ from typing import List, Tuple, Dict
 VISUAL_CLIP_ANOMALY_THRESHOLD = 0.65 # If clip_score (0-1, higher is more fake-like) exceeds this.
 
 FUSION_MODEL_WEIGHTS = {
-    "visual_clip": 0.216,
-    "gemini_visual_artifacts": 0.195,
+    "visual_clip": 0.195,
+    "gemini_visual_artifacts": 0.216,
     "gemini_lipsync_issue": 0.195,
     "gemini_blink_abnormality": 0.151,
-    "ocr": 0.054,
+    "gibberish": 0.054,
     "flow": 0.054,
     "audio": 0.054,
     "video_ai": 0.081

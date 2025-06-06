@@ -92,37 +92,49 @@ async def run_detection_pipeline(
         logger.info(f"[{run_id}] CLIP visual score calculated: {clip_score:.3f}")
 
         logger.info(f"[{run_id}] Step 3: Transcribing audio content with Whisper.")
-        transcription = {"text": "", "words": []}
+        transcription = {"text": "", "words": [], "avg_no_speech_prob": 1.0}
         whisper_model = models_dict.get("whisper_model")
         if whisper_model and temp_audio_path:
             transcription = models.transcribe_audio_content(
                 temp_audio_path, whisper_model
             )
+        
+        # --- Check for high "no speech" probability from Whisper ---
+        NO_SPEECH_THRESHOLD = 0.85
+        avg_no_speech_prob = transcription.get("avg_no_speech_prob", 0.0)
+        lipsync_enabled = True
+        if avg_no_speech_prob > NO_SPEECH_THRESHOLD:
+            logger.warning(f"[{run_id}] High 'no speech' probability ({avg_no_speech_prob:.2f}) detected. Disabling lip-sync check.")
+            lipsync_enabled = False
+            # Overwrite transcript to avoid showing garbage text in results
+            transcription["text"] = "[No speech detected]"
+            transcription["words"] = []
+
         detection_results["transcript_snippet"] = (
             transcription["text"][:150] + "..."
             if transcription["text"] else "[No Speech/Audio Error]"
         )
         logger.info(f"[{run_id}] Audio transcribed. Snippet: {detection_results['transcript_snippet']}")
 
-        logger.info(f"[{run_id}] Step 4: Running Gemini inspections (visual, lip-sync, blinks, OCR).")
+        logger.info(f"[{run_id}] Step 4: Running Gemini inspections (visual, lip-sync, blinks, text).")
         gemini_model = models_dict.get("gemini_model")
         vis_flag = lip_flag = blink_flag = 0
-        ocr_score_val = 0.0
+        gibberish_score_val = 0.0
         gemini_timeline_events: List[Dict[str, Any]] = []
 
         if gemini_model:
-            vis_flag, lip_flag, blink_flag, ocr_score_val, gemini_timeline_events = await gemini.run_gemini_inspections(
+            vis_flag, lip_flag, blink_flag, gibberish_score_val, gemini_timeline_events = await gemini.run_gemini_inspections(
                 frames,
                 video_path,
                 transcription,
                 gemini_model,
                 fps=fps,
                 enable_visual_artifacts=True,
-                enable_lipsync=True,
+                enable_lipsync=lipsync_enabled,
                 enable_abnormal_blinks=True,
                 enable_ocr_gibberish=True,
             )
-        logger.info(f"[{run_id}] Gemini inspections completed. Visual: {vis_flag}, Lip-sync: {lip_flag}, Blinks: {blink_flag}, OCR score: {ocr_score_val:.2f}, Events: {len(gemini_timeline_events)}")
+        logger.info(f"[{run_id}] Gemini inspections completed. Visual: {vis_flag}, Lip-sync: {lip_flag}, Blinks: {blink_flag}, Gibberish score: {gibberish_score_val:.2f}, Events: {len(gemini_timeline_events)}")
 
         detection_results.update({
             "flag_gemini_visual_artifact": vis_flag,
@@ -149,7 +161,7 @@ async def run_detection_pipeline(
 
         logger.info(f"[{run_id}] Step 6: Fusing detection scores.")
         other_scores_for_fusion = {
-            "ocr": ocr_score_val,
+            "gibberish": gibberish_score_val,
             "flow": flow_res.get("score", 0.0),
             "audio": audio_res.get("score", 0.0), 
             "video_ai": shot_res.get("score", 0.0)
@@ -175,9 +187,9 @@ async def run_detection_pipeline(
         module_results_for_tags = [flow_res, audio_res, shot_res]
         for res_dict in module_results_for_tags:
             all_detected_tags.extend(res_dict.get("tags", []))
-        # Add OCR tag if OCR score indicates anomaly (consistent with how OCR score is generated in gemini.py)
-        if ocr_score_val > 0:
-             all_detected_tags.append("gibberish_text") # Or whatever tag ocr module uses internally
+        # Add gibberish tag if score indicates anomaly
+        if gibberish_score_val > 0:
+             all_detected_tags.append("gibberish_text")
         detection_results["anomaly_tags_detected"] = sorted(list(set(all_detected_tags)))
         logger.info(f"[{run_id}] Aggregated anomaly tags: {detection_results['anomaly_tags_detected']}")
 
@@ -187,7 +199,7 @@ async def run_detection_pipeline(
             "gemini_visual_artifacts": vis_flag,
             "gemini_lipsync_issue": lip_flag,
             "gemini_blink_abnormality": blink_flag,
-            "ocr":           ocr_score_val,
+            "gibberish":           gibberish_score_val,
             "flow":          flow_res.get("score", 0.0),
             "audio":         audio_res.get("score", 0.0),
             "video_ai":      shot_res.get("score", 0.0),

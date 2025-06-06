@@ -1,6 +1,7 @@
 import requests
 import time
 import os
+import json
 
 def analyze_video(video_path: str):
     # 1. Upload video and get job_id
@@ -38,13 +39,19 @@ def analyze_video(video_path: str):
 
 if __name__ == "__main__":
     # Path to the test video
-    # video_path = "videos_for_testing/Puppramin.mp4"
-    video_path = "videos_for_testing/fake_kangaroo.mp4"
+    video_path = "videos_for_testing/Puppramin.mp4"
+    # video_path = "videos_for_testing/fake_kangaroo.mp4"
 
 
     try:
         result_data = analyze_video(video_path) # Renamed variable for clarity
-        print("\n📊 Final Results:")
+
+        # --- Full API Response for Frontend ---
+        print("\n--- Full API Response (for Frontend) ---")
+        print(json.dumps(result_data, indent=2))
+        print("----------------------------------------\n")
+        
+        print("\n📊 Formatted Summary:")
         
         # Top-level result fields
         final_result = result_data['result']
@@ -52,7 +59,7 @@ if __name__ == "__main__":
         print(f"📈 Confidence: {final_result['confidenceScore']:.2%}")
         print(f"🏷️  Label: {final_result['label']}")
         print(f"📝 Tags: {(', '.join(final_result['tags']) if final_result['tags'] else 'None')}")
-        print(f"⏱️  Processing Time: {result_data['processing_time']:.1f} seconds")
+        print(f"⏱️  Processing Time: {result_data.get('processing_time', 0.0):.1f} seconds")
         
         # Detailed results
         details = final_result['details']
@@ -79,7 +86,7 @@ if __name__ == "__main__":
                 "gemini_visual_artifacts": "Visual (Gemini Artifacts Flag)",
                 "gemini_lipsync_issue": "Sync (Gemini Lipsync Flag)",
                 "gemini_blink_abnormality": "Visual (Gemini Blinks Flag)",
-                "ocr": "Text (Gemini OCR Gibberish)",
+                "gibberish": "Text (Gibberish Check)",
                 "flow": "Visual (Motion Flow)",
                 "audio": "Audio (Looping)",
                 "video_ai": "Visual (Shot Changes)"

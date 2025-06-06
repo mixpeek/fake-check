@@ -67,7 +67,7 @@ class AnomalyEvent(BaseModel):
     `module` drives grouping in the UI; `event` is a short code.
     """
     module: Literal[
-        "ocr", "flow", "audio", "lip_sync",
+        "gibberish_text", "flow", "audio", "lip_sync",
         "crossmodal", "video_ai",
         "gemini_visual", "gemini_blink"
     ] = Field(..., description="Detector module that raised the event")
@@ -132,7 +132,7 @@ class DetectionResult(BaseModel):
                         "gemini_visual_artifacts": 1,
                         "gemini_lipsync_issue": 1,
                         "gemini_blink_abnormality": 0,
-                        "ocr": 0.12,
+                        "gibberish": 0.12,
                         "flow": 0.10,
                         "audio": 0.15,
                         "crossmodal": 0.15,
@@ -146,7 +146,7 @@ class DetectionResult(BaseModel):
                 },
                 "events": [
                     {
-                        "module": "ocr",
+                        "module": "gibberish_text",
                         "event": "gibberish_text",
                         "ts": 5.03,
                         "dur": 0.0,
