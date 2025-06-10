@@ -3,13 +3,13 @@
 from typing import List, Tuple, Dict
 
 # Thresholds for individual signals to be considered "anomalous" by the tagging system.
-VISUAL_CLIP_ANOMALY_THRESHOLD = 0.65 # If clip_score (0-1, higher is more fake-like) exceeds this.
+VISUAL_CLIP_ANOMALY_THRESHOLD = 0.60 # If clip_score (0-1, higher is more fake-like) exceeds this.
 
 FUSION_MODEL_WEIGHTS = {
     "visual_clip": 0.195,
-    "gemini_visual_artifacts": 0.216,
-    "gemini_lipsync_issue": 0.195,
-    "gemini_blink_abnormality": 0.151,
+    "gemini_visual_artifacts": 0.37,
+    "gemini_lipsync_issue": 0.145,
+    "gemini_blink_abnormality": 0.101,
     "gibberish": 0.054,
     "flow": 0.054,
     "audio": 0.054,
@@ -64,7 +64,7 @@ def fuse_detection_scores(
     # Determine the final label based on confidence thresholds.
     final_label = "UNCERTAIN"
     REAL_CONFIDENCE_THRESHOLD = 0.30 # If overall confidence < this, it's LIKELY_REAL
-    FAKE_CONFIDENCE_THRESHOLD = 0.70 # If overall confidence > this, it's LIKELY_FAKE
+    FAKE_CONFIDENCE_THRESHOLD = 0.60 # If overall confidence > this, it's LIKELY_FAKE
 
     if overall_deepfake_confidence < REAL_CONFIDENCE_THRESHOLD:
         final_label = "LIKELY_REAL"
