@@ -42,8 +42,6 @@ nest-asyncio==1.6.0
 aiofiles==23.2.1
 
 langdetect>=1.0.9
-librosa>=0.10.1
-soundfile>=0.12
 scikit-image==0.21.0
 scipy>=1.13
 

@@ -92,12 +92,12 @@ def calculate_visual_clip_score(
 
 # Whisper ASR Model & Transcription
 def transcribe_audio_content(
-    wav_path: Optional[str], # Made wav_path optional
+    wav_path: Optional[str],
     whisper_model 
 ) -> Dict[str, Any]:
     if not wav_path or not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
         print("Warning: WAV file for transcription is missing, empty, or path is None.", file=sys.stderr)
-        return {"text": "", "words": [], "avg_no_speech_prob": 1.0}
+        return {"text": "", "words": [], "avg_no_speech_prob": 1.0, "language": "unknown"}
     
     device = next(whisper_model.parameters()).device # Get device from model
     try:
@@ -109,10 +109,11 @@ def transcribe_audio_content(
         print(f"Error during Whisper transcription for {wav_path}: {e}", file=sys.stderr)
         import traceback # Moved import here for when it's actually needed
         print(traceback.format_exc(), file=sys.stderr) 
-        return {"text": "", "words": [], "avg_no_speech_prob": 1.0}
+        return {"text": "", "words": [], "avg_no_speech_prob": 1.0, "language": "unknown"}
     
     word_segments = []
     full_transcribed_text = transcription_result.get("text", "").strip()
+    detected_language = transcription_result.get("language", "unknown")
     
     # Calculate average no_speech_prob from all segments
     segment_data = transcription_result.get("segments", [])
@@ -132,4 +133,4 @@ def transcribe_audio_content(
                 "start": word_info.get("start", 0.0),
                 "end": word_info.get("end", 0.0)
             })
-    return {"text": full_transcribed_text, "words": word_segments, "avg_no_speech_prob": avg_no_speech_prob}
+    return {"text": full_transcribed_text, "words": word_segments, "avg_no_speech_prob": avg_no_speech_prob, "language": detected_language}

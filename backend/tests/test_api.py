@@ -39,8 +39,9 @@ def analyze_video(video_path: str):
 
 if __name__ == "__main__":
     # Path to the test video
-    video_path = "videos_for_testing/Puppramin.mp4"
-    # video_path = "videos_for_testing/fake_kangaroo.mp4"
+    # video_path = "videos_for_testing/Puppramin.mp4"
+    # video_path = "videos_for_testing/fake_la.mp4"
+    video_path = "videos_for_testing/fake_kangaroo.mp4"
 
 
     try:

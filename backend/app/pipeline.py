@@ -26,7 +26,6 @@ from . import config
 # -- NEW heuristic detectors --
 from .core import (
     flow,
-    audio as audio_mod,
 )
 
 # Setup logger for this module
@@ -92,22 +91,31 @@ async def run_detection_pipeline(
         logger.info(f"[{run_id}] CLIP visual score calculated: {clip_score:.3f}")
 
         logger.info(f"[{run_id}] Step 3: Transcribing audio content with Whisper.")
-        transcription = {"text": "", "words": [], "avg_no_speech_prob": 1.0}
+        transcription = {"text": "", "words": [], "avg_no_speech_prob": 1.0, "language": "unknown"}
         whisper_model = models_dict.get("whisper_model")
         if whisper_model and temp_audio_path:
             transcription = models.transcribe_audio_content(
                 temp_audio_path, whisper_model
             )
         
-        # --- Check for high "no speech" probability from Whisper ---
+        # --- Check for valid English speech, disabling lipsync if necessary ---
         NO_SPEECH_THRESHOLD = 0.85
         avg_no_speech_prob = transcription.get("avg_no_speech_prob", 0.0)
+        detected_lang = transcription.get("language", "unknown")
         lipsync_enabled = True
+
+        detection_results["detected_language"] = detected_lang # Store detected language
+
         if avg_no_speech_prob > NO_SPEECH_THRESHOLD:
             logger.warning(f"[{run_id}] High 'no speech' probability ({avg_no_speech_prob:.2f}) detected. Disabling lip-sync check.")
             lipsync_enabled = False
-            # Overwrite transcript to avoid showing garbage text in results
             transcription["text"] = "[No speech detected]"
+            transcription["words"] = []
+        elif detected_lang != 'en':
+            logger.warning(f"[{run_id}] Detected language is '{detected_lang}', not 'en'. Disabling lip-sync check.")
+            lipsync_enabled = False
+            # Overwrite transcript to avoid showing garbage text in results
+            transcription["text"] = f"[Non-English language detected: {detected_lang}]"
             transcription["words"] = []
 
         detection_results["transcript_snippet"] = (
@@ -148,22 +156,17 @@ async def run_detection_pipeline(
         flow_res  = flow.detect_spikes(frames, fps)
         logger.info(f"[{run_id}] Completed flow.detect_spikes. Score: {flow_res.get('score', -1):.2f}, Anomaly: {flow_res.get('anomaly', 'N/A')}, Events: {len(flow_res.get('events', []))}")
 
-        logger.info(f"[{run_id}] Starting heuristic: audio_mod.detect_loop_and_lag")
-        audio_res = audio_mod.detect_loop_and_lag(video_path, frames, fps)
-        logger.info(f"[{run_id}] Completed audio_mod.detect_loop_and_lag. Score: {audio_res.get('score', -1):.2f}, Anomaly: {audio_res.get('anomaly', 'N/A')}, Events: {len(audio_res.get('events', []))}")
-
         logger.info(f"[{run_id}] Starting heuristic: video.detect_lighting_jumps")
         shot_res  = video.detect_lighting_jumps(video_path)
         logger.info(f"[{run_id}] Completed video.detect_lighting_jumps. Score: {shot_res.get('score', -1):.2f}, Anomaly: {shot_res.get('anomaly', 'N/A')}, Events: {len(shot_res.get('events', []))}")
 
         # gather for fusion & timeline
-        module_results = [flow_res, audio_res, shot_res]
+        module_results = [flow_res, shot_res]
 
         logger.info(f"[{run_id}] Step 6: Fusing detection scores.")
         other_scores_for_fusion = {
             "gibberish": gibberish_score_val,
             "flow": flow_res.get("score", 0.0),
-            "audio": audio_res.get("score", 0.0), 
             "video_ai": shot_res.get("score", 0.0)
         }
         logger.info(f"[{run_id}] Scores for fusion: CLIP={clip_score:.3f}, Gemini Visual={vis_flag}, Gemini Lipsync={lip_flag}, Gemini Blink={blink_flag}, Others={other_scores_for_fusion}")
@@ -184,7 +187,7 @@ async def run_detection_pipeline(
 
         # Aggregate all anomaly tags
         all_detected_tags = list(fusion_generated_tags)
-        module_results_for_tags = [flow_res, audio_res, shot_res]
+        module_results_for_tags = [flow_res, shot_res]
         for res_dict in module_results_for_tags:
             all_detected_tags.extend(res_dict.get("tags", []))
         # Add gibberish tag if score indicates anomaly
@@ -201,7 +204,6 @@ async def run_detection_pipeline(
             "gemini_blink_abnormality": blink_flag,
             "gibberish":           gibberish_score_val,
             "flow":          flow_res.get("score", 0.0),
-            "audio":         audio_res.get("score", 0.0),
             "video_ai":      shot_res.get("score", 0.0),
         }
         detection_results["heuristicChecks"] = heuristic_checks
@@ -210,7 +212,7 @@ async def run_detection_pipeline(
         logger.info(f"[{run_id}] Step 8: Aggregating timeline events.")
         timeline_events: List[Dict[str, Any]] = []
         # Add events from non-Gemini heuristic modules
-        non_gemini_module_results = [flow_res, audio_res, shot_res]
+        non_gemini_module_results = [flow_res, shot_res]
         for res in non_gemini_module_results: 
             timeline_events.extend(res.get("events", []))
         timeline_events.extend(gemini_timeline_events)

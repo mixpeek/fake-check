@@ -59,7 +59,7 @@ def detect_spikes(frames: List[Image.Image], fps: float) -> Dict[str, Any]:
 
             events.append({
                 "module": "flow",
-                "event": "flow_spike", # This is now the only event type from this module
+                "event": "flow_spike",
                 "ts": ts,
                 "dur": 0.0,
                 "meta": event_meta

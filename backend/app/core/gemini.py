@@ -92,11 +92,16 @@ async def _run_ffmpeg_extract(video_path: str, start: float,
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _sync)
 
-def _pick_frames(frames: List[Image.Image]) -> List[Image.Image]:
+def _pick_frames(frames: List[Image.Image], num_frames_to_pick: int = 12) -> List[Image.Image]:
+    """
+    Selects a specified number of evenly-spaced frames from a list.
+    """
     n = len(frames)
-    if n <= 2:
+    if n <= num_frames_to_pick:
         return frames
-    return [frames[0], frames[n // 2], frames[-1]]
+    # Use np.linspace to get evenly spaced indices, then convert to int and remove duplicates
+    indices = sorted(list(set(np.linspace(0, n - 1, num=num_frames_to_pick, dtype=int))))
+    return [frames[i] for i in indices]
 
 def _extract_text(resp, fn=""):
     # Prioritize checking candidates and their parts, which is more robust
@@ -152,8 +157,19 @@ async def gemini_check_visual_artifacts(frames: List[Image.Image], model) -> int
     fn = "gemini_check_visual_artifacts"
     if not model or not frames:
         return 0
-    prompt = ("Examine these frames. Do you see clear visual artifacts or "
-              "distortions that strongly suggest AI deepfake? YES / NO. Only respond with YES or NO.")
+    
+    prompt = (
+        "Analyze the following video frames for any signs of AI manipulation or deepfake artifacts. "
+        "Pay close attention to subtle inconsistencies. Specifically look for:\n"
+        "- Warping or distortion in the background, especially around the person's head.\n"
+        "- Unnatural skin texture (too smooth or waxy).\n"
+        "- Flickering or strange artifacts around the edges of the face or hair.\n"
+        "- Inconsistent lighting or shadows on the face compared to the environment.\n"
+        "- Any unusual 'morphing' or 'melting' effects between frames.\n\n"
+        "Based on your analysis, are there visual artifacts that suggest this is a deepfake? "
+        "Respond with only YES or NO."
+    )
+
     parts = [prompt] + [
         {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
         for f in _pick_frames(frames)
@@ -172,8 +188,10 @@ async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
     fn = "gemini_check_abnormal_blinks"
     if not model or not frames:
         return 0
-    prompt = ("Inspect the eyes in these frames. Is the blinking pattern "
-              "abnormal or unnatural? Respond YES / NO. Only respond with YES or NO.")
+    prompt = ("Inspect the eyes in these frames, which are sampled sequentially from a video. "
+              "Does the person blink? If so, is the blinking pattern "
+              "abnormal or unnatural (e.g., no blinking, eyes closed for too long, fluttering)? "
+              "Respond YES for abnormal blinking, NO otherwise. Only respond with YES or NO.")
     parts = [prompt] + [
         {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
         for f in _pick_frames(frames)

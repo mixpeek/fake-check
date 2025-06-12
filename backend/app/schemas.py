@@ -67,7 +67,7 @@ class AnomalyEvent(BaseModel):
     `module` drives grouping in the UI; `event` is a short code.
     """
     module: Literal[
-        "gibberish_text", "flow", "audio", "lip_sync",
+        "gibberish_text", "flow", "lip_sync",
         "crossmodal", "video_ai",
         "gemini_visual", "gemini_blink"
     ] = Field(..., description="Detector module that raised the event")

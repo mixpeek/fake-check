@@ -14,7 +14,7 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 # Model names (matching notebook exactly)
 CLIP_MODEL_NAME = "ViT-L-14"
 CLIP_PRETRAINED = "laion2b_s32b_b82k"
-WHISPER_MODEL_NAME = "base"
+WHISPER_MODEL_NAME = "large-v3"
 GEMINI_MODEL_NAME = "gemini-2.5-pro-preview-05-06"
 
 # Processing settings (matching notebook)
