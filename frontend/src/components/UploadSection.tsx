@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { DropZone } from './ui/DropZone';
 import { ProgressBar } from './ui/ProgressBar';
 import { Button } from './ui/Button';
-import { RefreshCcw, FileVideo } from 'lucide-react';
+import { RefreshCcw, FileVideo, Lock } from 'lucide-react';
 import { AnalyzedVideo } from '../types';
 import { formatFileSize } from '../lib/utils';
 import { ExampleVideos } from './ExampleVideos';
+import { useAuth } from '../contexts/AuthContext';
 
 interface UploadSectionProps {
   currentVideo: AnalyzedVideo | null;
@@ -21,31 +22,16 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   onReset,
   isProcessing
 }) => {
-  const [isDragOver, setIsDragOver] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  const usageLimit = 5;
 
-  const handleDragEnter = () => setIsDragOver(true);
-  const handleDragLeave = () => setIsDragOver(false);
-  const handleDrop = () => setIsDragOver(false);
-
-  const handleExampleSelect = (videoId: string) => {
-    const mockFile = new File([""], `example-${videoId}.mp4`, { type: "video/mp4" });
-    onFileSelect(mockFile);
+  const handleExampleSelect = (file: File) => {
+    onFileSelect(file);
   };
 
-  return (
-    <motion.section 
-      className="w-full max-w-3xl mx-auto px-4 py-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="text-center mb-8">
-        <p className="mt-4 text-gray-600">
-          Upload any video under 30 seconds to see our detection in action. We'll analyze it across multiple dimensions and show you exactly what we found.
-        </p>
-      </div>
-
-      {currentVideo ? (
+  const renderContent = () => {
+    if (currentVideo) {
+      return (
         <motion.div 
           className="card p-6"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -102,18 +88,57 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </div>
           )}
         </motion.div>
-      ) : (
-        <>
-          <DropZone
-            onFileSelect={onFileSelect}
-            isDisabled={isProcessing}
-            isProcessing={isProcessing}
-            maxFileSizeMB={30}
-            className="h-64"
-          />
-          <ExampleVideos onSelect={handleExampleSelect} />
-        </>
-      )}
+      );
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+          <Lock className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Authentication Required</h3>
+          <p className="mt-1 text-sm text-gray-500">Please sign in or sign up to analyze videos.</p>
+        </div>
+      );
+    }
+
+    if (user && user.usage_count >= usageLimit) {
+      return (
+        <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+          <Lock className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Usage Limit Reached</h3>
+          <p className="mt-1 text-sm text-gray-500">You have used all {usageLimit} of your free analyses.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <>
+        <DropZone
+          onFileSelect={onFileSelect}
+          isDisabled={isProcessing}
+          isProcessing={isProcessing}
+          maxFileSizeMB={30}
+          className="h-64"
+        />
+        <ExampleVideos onSelect={handleExampleSelect} />
+      </>
+    );
+  };
+
+  return (
+    <motion.section 
+      className="w-full max-w-3xl mx-auto px-4 py-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="text-center mb-8">
+        <p className="mt-4 text-gray-600">
+          Upload any video under 30 seconds to see our detection in action. We'll analyze it across multiple dimensions and show you exactly what we found.
+        </p>
+      </div>
+
+      {renderContent()}
     </motion.section>
   );
 };

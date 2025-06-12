@@ -1,89 +1,75 @@
 import { useState, useCallback } from 'react';
 import { AnalyzedVideo, HistoryItem } from '../types';
 import { uploadVideo, analyzeVideo } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
 
 export const useVideoDetection = () => {
+  const { token } = useAuth();
   const [currentVideo, setCurrentVideo] = useState<AnalyzedVideo | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileSelect = useCallback(async (file: File) => {
-    setIsProcessing(true);
-    
-    // Initialize video object
-    setCurrentVideo({
+    if (!token) {
+      // This case should ideally be prevented by the UI, but it's a good safeguard.
+      alert("Please sign in to upload a video.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File is too large. Max size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
+      return;
+    }
+
+    const videoData: AnalyzedVideo = {
       id: '',
       filename: file.name,
       fileSize: file.size,
-      thumbnailUrl: '',
+      thumbnailUrl: URL.createObjectURL(file),
       result: null,
       status: 'uploading',
       uploadProgress: 0,
-    });
+    };
+    setCurrentVideo(videoData);
 
     try {
-      // Upload the file
-      const { id, url } = await uploadVideo(file, (progress) => {
-        setCurrentVideo((prev) => 
-          prev ? { ...prev, uploadProgress: progress } : null
-        );
+      const { id: jobId } = await uploadVideo(file, token, (progress) => {
+        setCurrentVideo(prev => prev ? { ...prev, uploadProgress: progress } : null);
       });
-
-      // Update with upload complete and start processing
-      setCurrentVideo((prev) => 
-        prev ? { 
-          ...prev, 
-          id,
-          thumbnailUrl: url,
-          status: 'processing',
-          uploadProgress: 100 
-        } : null
-      );
-
-      // Process the video
-      const result = await analyzeVideo(id);
-
-      // Update with completed result
-      setCurrentVideo((prev) => 
-        prev ? { 
-          ...prev, 
-          result,
-          status: 'completed',
-        } : null
-      );
-
-      // Add to history
-      const historyItem: HistoryItem = {
-        id,
-        filename: file.name,
-        thumbnailUrl: url,
-        result,
-        analyzedAt: new Date().toLocaleString()
-      };
       
-      setHistory((prev) => [historyItem, ...prev]);
-    } catch (error) {
-      setCurrentVideo((prev) => 
-        prev ? { 
-          ...prev, 
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error occurred'
-        } : null
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
+      setCurrentVideo(prev => prev ? { ...prev, id: jobId, status: 'processing' } : null);
+      
+      const result = await analyzeVideo(jobId);
+      
+      setCurrentVideo(prev => prev ? { ...prev, status: 'completed', result } : null);
+      
+      const newHistoryItem: HistoryItem = {
+        id: jobId,
+        filename: file.name,
+        thumbnailUrl: URL.createObjectURL(file),
+        result: result,
+        analyzedAt: new Date().toLocaleString(),
+      };
+      setHistory(prev => [newHistoryItem, ...prev]);
 
-  const resetCurrentVideo = useCallback(() => {
+    } catch (error: any) {
+      console.error('Analysis failed:', error);
+      setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: error.message } : null);
+    }
+  }, [token]);
+
+  const resetCurrentVideo = () => {
     setCurrentVideo(null);
-  }, []);
+  };
+
+  const isProcessing = currentVideo?.status === 'uploading' || currentVideo?.status === 'processing';
 
   return {
     currentVideo,
     history,
     isProcessing,
     handleFileSelect,
-    resetCurrentVideo
+    resetCurrentVideo,
   };
 };

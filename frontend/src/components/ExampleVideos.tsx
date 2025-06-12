@@ -43,7 +43,7 @@ export const ExampleVideos: React.FC<ExampleVideosProps> = ({ onSelect }) => {
     try {
       const response = await fetch(video.path);
       const blob = await response.blob();
-      const file = new File([blob], `example-${video.id}.mp4`, { type: 'video/mp4' });
+      const file = new File([blob], video.path.split('/').pop() || `example-${video.id}.mp4`, { type: 'video/mp4' });
       onSelect(file);
     } catch (error) {
       console.error('Error loading example video:', error);

@@ -21,7 +21,7 @@ Before you begin, ensure you have the following installed on your system:
 *   **API Keys**:
     *   Google Gemini API Key
     *   HuggingFace Token (for model downloads)
-*   **Google Cloud Credentials**: A JSON key file for a service account with the Video Intelligence API enabled.
+    *   **Google Cloud Credentials**: A JSON key file for a service account with the Video Intelligence API enabled.
 
 ## Getting Started
 
@@ -30,7 +30,7 @@ Follow these steps to set up and run the entire application locally.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-repo/FakeCheck.git
+git clone https://github.com/mixpeek/fake-check.git
 cd FakeCheck
 ```
 
@@ -64,15 +64,10 @@ First, let's get the backend server running.
     ```dotenv
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
+    GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json"
     ```
 
-5.  **Set Google Cloud Credentials:**
-    Set an environment variable to point to your Google Cloud service account key.
-    ```bash
-    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json"
-    ```
-
-6.  **Run the Backend Server:**
+5.  **Run the Backend Server:**
     ```bash
     python run_server.py
     ```

@@ -206,96 +206,97 @@ async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
     except Exception as e:
         _log_exc(fn, e); return 0
 
-async def gemini_check_lipsync(video_path: str, transcript: str,
+async def gemini_check_lipsync(video_path: str, transcript: Dict[str, Any] | str,
                                model) -> Dict[str, Any]:
     """
     Extract a 2-second voiced clip and ask Gemini if lips are synced.
     Returns a dictionary with a flag and an optional event.
+    This function now operates pessimistically: it flags an issue (returns flag=1)
+    if any part of the check fails, and only returns flag=0 on explicit success.
     """
     fn = "gemini_check_lipsync"
-    flag = 0
+    flag = 1  # Default to 1 (issue detected) until proven otherwise
     lip_sync_event = None
 
-    if not model or not transcript:
-        return {"flag": 0, "event": None}
+    if not model:
+        logger.warning(f"[{fn}] No model provided, cannot perform check.")
+        return {"flag": 0, "event": None} # Return 0 if model is disabled entirely
+
+    # --- 1. Validate that we have a usable transcript ---
+    transcript_to_use = ""
+    if isinstance(transcript, dict) and "text" in transcript:
+        transcript_to_use = transcript.get("text", "").strip()
+    elif isinstance(transcript, str):
+        transcript_to_use = transcript.strip()
+
+    if not transcript_to_use or "[No speech detected]" in transcript_to_use or "[Non-English language detected" in transcript_to_use:
+        logger.warning(f"[{fn}] No meaningful transcript for lipsync check ('{transcript_to_use[:50]}...'). Flagging as issue.")
+        lip_sync_event = {
+            "module": "lip_sync", "event": "check_failed", "ts": 0.0, "dur": 0.0,
+            "meta": {"reason": "No valid transcript for comparison."}
+        }
+        return {"flag": flag, "event": lip_sync_event}
 
     tmp_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
     try:
-        # probe video duration
-        duration = float((await asyncio.get_event_loop().run_in_executor(
-            None, lambda: ffmpeg.probe(video_path)))["format"]["duration"])
+        # --- 2. Prepare clip and transcript segment ---
+        duration = float((await _run_ffmpeg_probe(video_path))["format"]["duration"])
         clip_len, start_time = 2.0, 0.0
-        
-        # Correctly derive transcript_segment
-        if isinstance(transcript, dict) and "text" in transcript:
-            transcript_to_use = transcript["text"]
-        elif isinstance(transcript, str):
-            transcript_to_use = transcript
-        else:
-            transcript_to_use = "" # Fallback to empty string if unexpected type
         transcript_segment = transcript_to_use[:500]
 
-        # quick best-effort word-timestamp handling (if provided)
         if isinstance(transcript, dict) and transcript.get("words"):
-            if transcript["words"]: # Check if words list is not empty
-                first_word_start = transcript["words"][0]["start"]
-                start_time       = first_word_start
-                end_time         = first_word_start + clip_len
-                words_in_seg = [
-                    w["word"] for w in transcript["words"]
-                    if first_word_start <= w["start"] <= end_time
-                ]
+            words = transcript["words"]
+            if words:
+                first_word_start = words[0].get("start", 0.0)
+                start_time = first_word_start
+                end_time = first_word_start + clip_len
+                words_in_seg = [w["word"] for w in words if first_word_start <= w.get("start", 0) <= end_time]
                 transcript_segment = " ".join(words_in_seg)
-            else: # Handle empty words list if transcript is dict but words is empty
-                logger.warning(f"[{fn}] Transcript dictionary has empty 'words' list. Using full transcript snippet.")
+        
+        await _run_ffmpeg_extract(video_path, start_time, clip_len, tmp_clip)
 
+        if not os.path.exists(tmp_clip) or os.path.getsize(tmp_clip) == 0:
+            raise RuntimeError("FFmpeg failed to create a valid video clip.")
 
-        # extract clip
-        await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: (ffmpeg
-                     .input(video_path, ss=start_time, t=clip_len)
-                     .output(tmp_clip,
-                             vcodec="libx264", acodec="aac",
-                             strict="experimental", loglevel="error")
-                     .overwrite_output()
-                     .run(capture_stdout=True, capture_stderr=True))
-        )
-
-        if not os.path.exists(tmp_clip):
-            logger.error(f"[{fn}] failed to create clip file")
-            return {"flag": 0, "event": None}
-
+        # --- 3. Ask Gemini for analysis ---
         clip_b64 = base64.b64encode(open(tmp_clip, "rb").read()).decode()
         prompt = ("Watch the clip and read the transcript. "
-                  "Are lip motions synced with the speech? YES / NO. "
-                  "Only respond with YES or NO.")
-        parts = [
-            prompt,
-            {"mime_type": "video/mp4", "data": clip_b64},
-            {"text": transcript_segment}
-        ]
+                  "Are the person's lip movements accurately synchronized with the spoken words in the transcript? "
+                  "Respond with only YES for synced, or NO for not synced.")
+        parts = [prompt, {"mime_type": "video/mp4", "data": clip_b64}, {"text": transcript_segment}]
 
         resp = await safe_generate_content(model, parts)
         text = _extract_text(resp, fn)
         logger.debug(f"GEMINI_REPLY ({fn}): {text}")
         
-        if "NO" in text:
-            flag = 1
-            event_ts = start_time 
-            event_dur = clip_len
+        # --- 4. Process Gemini's response ---
+        if "YES" in text:
+            flag = 0  # This is the only path to a "no issue" result
+        elif "NO" in text:
+            # Flag is already 1, just create the specific event
             lip_sync_event = {
-                "module": "lip_sync", 
-                "event": "gemini_desync", 
-                "ts": round(event_ts, 2), 
-                "dur": round(event_dur, 2), 
-                "meta": {"transcript_segment": transcript_segment[:100]} # Truncate for meta
+                "module": "lip_sync", "event": "gemini_desync",
+                "ts": round(start_time, 2), "dur": round(clip_len, 2),
+                "meta": {"transcript_segment": transcript_segment[:100]}
             }
-        # No "else" needed for flag as it's initialized to 0
-            
+        else:
+            # Ambiguous response, treat as a failure to confirm sync
+            logger.warning(f"[{fn}] Ambiguous Gemini response: '{text}'. Flagging as issue.")
+            lip_sync_event = {
+                "module": "lip_sync", "event": "check_failed",
+                "ts": round(start_time, 2), "dur": round(clip_len, 2),
+                "meta": {"reason": "Ambiguous response from Gemini.", "response": text}
+            }
+
     except Exception as e:
         _log_exc(fn, e)
-        # flag remains 0, event remains None
+        # Exception occurred, ensure we flag it as an issue.
+        flag = 1
+        lip_sync_event = {
+            "module": "lip_sync", "event": "check_failed",
+            "ts": 0.0, "dur": 0.0,
+            "meta": {"reason": f"An exception occurred during the check: {type(e).__name__}"}
+        }
     finally:
         if os.path.exists(tmp_clip):
             os.remove(tmp_clip)

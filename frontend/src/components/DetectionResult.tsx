@@ -57,10 +57,10 @@ const AnalysisSection: React.FC<{
 
   return (
     <div className={cn(
-      "rounded-lg overflow-hidden",
+      "rounded-lg",
       section.failed ? "bg-error-50" : "bg-success-50"
     )}>
-      <div className="px-4 py-3 flex items-center justify-between">
+      <div className="px-4 py-3 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-2">
           {section.failed ? (
             <X className="h-4 w-4 text-error-600" />
@@ -77,15 +77,13 @@ const AnalysisSection: React.FC<{
               <Info className="h-4 w-4" />
             </button>
             {showTooltip && (
-              <div className="fixed z-50 w-64 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg" style={{
-                transform: 'translateX(-50%) translateY(-100%)',
-                left: '50%',
-                marginTop: '-8px'
-              }}>
+              <div 
+                className="absolute z-50 w-64 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg"
+              >
                 {section.description}
-                <div className="absolute left-1/2 bottom-0 w-2 h-2 bg-gray-900" style={{
-                  transform: 'translateX(-50%) translateY(50%) rotate(45deg)'
-                }}></div>
+                <div 
+                  className="absolute left-1/2 top-full h-2 w-2 bg-gray-900 -translate-y-1/2 -translate-x-1/2 rotate-45"
+                ></div>
               </div>
             )}
           </div>
@@ -165,43 +163,35 @@ export const DetectionResult: React.FC<DetectionResultProps> = ({ result, videoU
       title: 'Visual Artifacts Check',
       description: 'Detects compression artifacts and visual inconsistencies.',
       failed: details.heuristicChecks.gemini_visual_artifacts > 0.5,
-      events: details.events.filter(e => e.module === 'flow' || e.event === 'visual_artifact')
     },
     {
       title: 'Lipsync Analysis',
       description: 'Checks for audio-visual synchronization issues.',
       failed: details.heuristicChecks.gemini_lipsync_issue > 0.5,
-      events: details.events.filter(e => e.event === 'lipsync_mismatch')
+      events: details.events.filter(e => e.module === 'lip_sync')
     },
     {
       title: 'Blink Pattern Analysis',
       description: 'Analyzes natural eye movement patterns.',
       failed: details.heuristicChecks.gemini_blink_abnormality > 0.5,
-      events: details.events.filter(e => e.event === 'abnormal_blink')
     },
     {
       title: 'Text Analysis',
       description: 'Detects unnatural or generated text patterns.',
       failed: details.heuristicChecks.ocr > 0.5,
-      events: details.events.filter(e => e.event === 'gibberish_text')
+      events: details.events.filter(e => e.module === 'gibberish_text')
     },
     {
       title: 'Motion Flow Analysis',
       description: 'Analyzes movement consistency and flow.',
       failed: details.heuristicChecks.flow > 0.5,
-      events: details.events.filter(e => e.event === 'flow_spike')
-    },
-    {
-      title: 'Audio Analysis',
-      description: 'Detects audio anomalies and loops.',
-      failed: details.heuristicChecks.audio > 0.5,
-      events: details.events.filter(e => e.module === 'audio')
+      events: details.events.filter(e => e.module === 'flow')
     },
     {
       title: 'Light Changes Analysis',
       description: 'Detects unnatural lighting changes.',
       failed: details.heuristicChecks.video_ai > 0.5,
-      events: details.events.filter(e => e.event === 'light_change')
+      events: details.events.filter(e => e.module === 'video_ai')
     }
   ];
 

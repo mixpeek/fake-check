@@ -32,3 +32,9 @@ else:
 if HF_TOKEN:
     os.environ["HF_TOKEN"] = HF_TOKEN
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
+
+# Security & Authentication
+SECRET_KEY = os.getenv("SECRET_KEY", "a_super_secret_key_for_development")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+USER_USAGE_LIMIT = 5

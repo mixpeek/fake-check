@@ -7,3 +7,4 @@ venv/
 */package-lock.json
 **.zip
 **.json
+**.db

@@ -48,3 +48,8 @@ scipy>=1.13
 # ───────── Google Cloud ─────────
 google-cloud-vision>=3.6
 google-cloud-videointelligence>=2.11
+
+# Authentication & Database
+sqlalchemy
+passlib[bcrypt]
+python-jose[cryptography]
