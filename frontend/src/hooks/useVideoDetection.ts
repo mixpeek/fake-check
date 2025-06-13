@@ -50,7 +50,23 @@ export const useVideoDetection = () => {
 
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: error.message } : null);
+      
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      
+      if (error.message.includes('timeout')) {
+        errorMessage = 'Analysis timeout. The video processing took longer than expected. Please try again with a shorter video.';
+      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.message.includes('Upload failed')) {
+        errorMessage = 'Failed to upload video. Please check the file format and try again.';
+      } else if (error.message.includes('Analysis failed')) {
+        errorMessage = 'Video analysis failed. The video might be corrupted or in an unsupported format.';
+      } else if (!errorMessage || errorMessage === 'Failed to fetch') {
+        errorMessage = 'Connection lost to analysis service. Please try again.';
+      }
+      
+      setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: errorMessage } : null);
     }
   }, []);
 

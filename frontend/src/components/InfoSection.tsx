@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Eye, Mic, Search, AlertTriangle } from 'lucide-react';
+import { Brain, Eye, Mic, Search, AlertTriangle, Activity } from 'lucide-react';
 
 export const InfoSection: React.FC = () => {
   return (
@@ -18,7 +18,7 @@ export const InfoSection: React.FC = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={index}
@@ -61,27 +61,39 @@ export const InfoSection: React.FC = () => {
 
 const features = [
   {
-    title: "Facial Pattern Analysis",
-    description: "We analyze micro-expressions and facial consistency using advanced neural networks trained on millions of real and synthetic faces. Even the best deepfakes leave subtle statistical fingerprints.",
+    title: "Neural Network Visual Analysis",
+    description: "Our CLIP model analyzes visual patterns and inconsistencies by comparing frames against millions of real and synthetic faces, detecting statistical fingerprints that even the best deepfakes leave behind.",
     icon: <Brain className="h-5 w-5 text-primary-600" />,
     iconBg: "bg-primary-100"
   },
   {
-    title: "Natural Eye Movement Tracking",
-    description: "Humans blink 15-20 times per minute with natural variation. AI-generated faces often show robotic patterns - too perfect, too regular, or completely absent. We catch these unnatural rhythms.",
-    icon: <Eye className="h-5 w-5 text-secondary-600" />,
-    iconBg: "bg-secondary-100"
+    title: "Visual Artifacts Detection",
+    description: "Advanced AI scans for compression artifacts, warping distortions, unnatural skin textures, and flickering effects around face edges that occur when synthetic faces are blended onto real videos.",
+    icon: <Search className="h-5 w-5 text-error-600" />,
+    iconBg: "bg-error-100"
   },
   {
-    title: "Voice-Face Synchronization",
-    description: "Our system checks if lip movements genuinely match the audio. Deepfakes often show tiny delays or mismatches that are invisible to the human eye but clear to our algorithms.",
+    title: "Audio-Visual Synchronization",
+    description: "Our system extracts voiced segments and analyzes if lip movements genuinely match the spoken words. Deepfakes often show tiny delays or mismatches invisible to the human eye.",
     icon: <Mic className="h-5 w-5 text-warning-600" />,
     iconBg: "bg-warning-100"
   },
   {
-    title: "Pixel-Level Artifact Detection",
-    description: "We scan for compression artifacts, boundary inconsistencies, and temporal flickering that occur when AI tries to blend synthetic faces onto real videos.",
-    icon: <Search className="h-5 w-5 text-error-600" />,
-    iconBg: "bg-error-100"
+    title: "Eye Movement & Blink Analysis",
+    description: "Humans blink 15-20 times per minute with natural variation. AI-generated faces often show robotic patterns - too perfect, too regular, or completely absent. We detect these unnatural rhythms.",
+    icon: <Eye className="h-5 w-5 text-secondary-600" />,
+    iconBg: "bg-secondary-100"
+  },
+  {
+    title: "Text Corruption Detection",
+    description: "We perform OCR on video frames to detect gibberish text or corrupted characters that often appear in AI-generated content, indicating synthetic generation artifacts in the visual pipeline.",
+    icon: <Search className="h-5 w-5 text-primary-600" />,
+    iconBg: "bg-primary-100"
+  },
+  {
+    title: "Motion Flow Analysis",
+    description: "Optical flow analysis detects unnatural movement spikes and structural inconsistencies between frames that occur when AI tries to maintain temporal coherence in generated video sequences.",
+    icon: <Activity className="h-5 w-5 text-secondary-600" />,
+    iconBg: "bg-secondary-100"
   }
 ];

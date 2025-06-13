@@ -41,7 +41,9 @@ def analyze_video(video_path: str):
 
 if __name__ == "__main__":
     # Path to the test video
-    video_path = "../videos_for_testing/fake_la.mp4"
+    # video_path = "../videos_for_testing/fake_la.mp4"
+    video_path = "../videos_for_testing/example2.mp4"
+
 
     try:
         # Analyze video with token

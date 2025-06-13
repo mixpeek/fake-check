@@ -110,7 +110,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     >
       <div className="text-center mb-8">
         <p className="mt-4 text-gray-600">
-          Upload any video under 30 seconds to see our detection in action. We'll analyze it across multiple dimensions and show you exactly what we found.
+          Upload any video to see our detection in action. We'll analyze it across multiple dimensions and show you exactly what we found.
         </p>
       </div>
 
