@@ -3,54 +3,16 @@ import time
 import os
 import json
 
-BASE_URL = "http://localhost:8000/api"
-TEST_USER_EMAIL = "test2@example.com"
-TEST_USER_PASSWORD = "password123"
+BASE_URL = "http://localhost:8001/api"
 
-def get_auth_token(email, password):
-    """
-    Logs in a user and returns the auth token.
-    If the user doesn't exist, it signs them up first.
-    """
-    login_url = f"{BASE_URL}/auth/login"
-    signup_url = f"{BASE_URL}/auth/signup"
-    
-    # 1. Try to log in first
-    login_data = {'username': email, 'password': password}
-    response = requests.post(login_url, data=login_data)
-    
-    # 2. If login fails (user might not exist), sign up
-    if response.status_code != 200:
-        print("Login failed, attempting to sign up user...")
-        signup_data = {'email': email, 'password': password}
-        signup_response = requests.post(signup_url, json=signup_data)
-        
-        if signup_response.status_code != 200:
-            # If signup fails for a reason other than "already exists", raise an error.
-            if "already registered" not in signup_response.text:
-                 raise Exception(f"Signup failed: {signup_response.text}")
-            print("User already exists, proceeding with login.")
-        else:
-            print("✅ User signed up successfully.")
-
-        # 3. Log in again after successful signup or if user already existed
-        response = requests.post(login_url, data=login_data)
-        if response.status_code != 200:
-            raise Exception(f"Login failed after signup attempt: {response.text}")
-
-    print("✅ Successfully logged in.")
-    return response.json()['access_token']
-
-
-def analyze_video(video_path: str, token: str):
+def analyze_video(video_path: str):
     # 1. Upload video and get job_id
     url = f"{BASE_URL}/analyze"
-    headers = {"Authorization": f"Bearer {token}"}
     
     print(f"\nUploading video: {os.path.basename(video_path)}")
     with open(video_path, 'rb') as f:
         files = {'file': f}
-        response = requests.post(url, files=files, headers=headers)
+        response = requests.post(url, files=files)
     
     if response.status_code != 200:
         raise Exception(f"Upload failed: {response.text}")
@@ -82,11 +44,8 @@ if __name__ == "__main__":
     video_path = "../videos_for_testing/fake_la.mp4"
 
     try:
-        # Get auth token
-        auth_token = get_auth_token(TEST_USER_EMAIL, TEST_USER_PASSWORD)
-        
         # Analyze video with token
-        result_data = analyze_video(video_path, auth_token)
+        result_data = analyze_video(video_path)
 
         # --- Full API Response for Frontend ---
         print("\n--- Full API Response (for Frontend) ---")

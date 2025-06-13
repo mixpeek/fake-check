@@ -71,7 +71,7 @@ First, let's get the backend server running.
     ```bash
     python run_server.py
     ```
-    The backend API will now be running at `http://localhost:8000`.
+    The backend API will now be running at `http://localhost:8001`.
 
 ### 3. Frontend Setup
 
@@ -92,6 +92,6 @@ With the backend running, open a **new terminal window** and set up the frontend
     ```bash
     npm run dev
     ```
-    The frontend application will be available at `http://localhost:5173`. It is pre-configured to connect to the backend API running on `http://localhost:8000`.
+    The frontend application will be available at `http://localhost:5173`. It is pre-configured to connect to the backend API running on `http://localhost:8001`.
 
 You can now open `http://localhost:5173` in your browser to use the application.

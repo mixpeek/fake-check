@@ -69,20 +69,3 @@ export type HistoryItem = {
   result: DetectionResult;
   analyzedAt: string;
 };
-
-// Auth Schemas
-export interface User {
-  id: number;
-  email: string;
-  usage_count: number;
-}
-
-export interface LoginCredentials {
-  username: string;
-  password: string;
-}
-
-export interface SignupCredentials {
-  email: string;
-  password: string;
-}

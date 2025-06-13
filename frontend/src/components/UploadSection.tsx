@@ -3,11 +3,10 @@ import { motion } from 'framer-motion';
 import { DropZone } from './ui/DropZone';
 import { ProgressBar } from './ui/ProgressBar';
 import { Button } from './ui/Button';
-import { RefreshCcw, FileVideo, Lock } from 'lucide-react';
+import { RefreshCcw, FileVideo } from 'lucide-react';
 import { AnalyzedVideo } from '../types';
 import { formatFileSize } from '../lib/utils';
 import { ExampleVideos } from './ExampleVideos';
-import { useAuth } from '../contexts/AuthContext';
 
 interface UploadSectionProps {
   currentVideo: AnalyzedVideo | null;
@@ -22,9 +21,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   onReset,
   isProcessing
 }) => {
-  const { isAuthenticated, user } = useAuth();
-  const usageLimit = 5;
-
   const handleExampleSelect = (file: File) => {
     onFileSelect(file);
   };
@@ -88,26 +84,6 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             </div>
           )}
         </motion.div>
-      );
-    }
-
-    if (!isAuthenticated) {
-      return (
-        <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-          <Lock className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Authentication Required</h3>
-          <p className="mt-1 text-sm text-gray-500">Please sign in or sign up to analyze videos.</p>
-        </div>
-      );
-    }
-
-    if (user && user.usage_count >= usageLimit) {
-      return (
-        <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-          <Lock className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Usage Limit Reached</h3>
-          <p className="mt-1 text-sm text-gray-500">You have used all {usageLimit} of your free analyses.</p>
-        </div>
       );
     }
     

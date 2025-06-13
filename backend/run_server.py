@@ -29,15 +29,15 @@ def main():
         print()
     
     print("🚀 Starting Deepfake Detection API")
-    print("📍 Server running at: http://localhost:8000")
-    print("📚 API docs available at: http://localhost:8000/docs")
+    print("📍 Server running at: http://localhost:8001")
+    print("📚 API docs available at: http://localhost:8001/docs")
     print()
-    
+
     # Run the server with debug logging
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
         log_level="info",
         access_log=True

@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
-
 # ─────────────────────────────────────────────────────────────
 #  Generic job-tracking models 
 # ─────────────────────────────────────────────────────────────
@@ -205,28 +204,3 @@ class JobState(BaseModel):
     filename: str
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-
-
-# ─────────────────────────────────────────────────────────────
-#  NEW: User Authentication Schemas
-# ─────────────────────────────────────────────────────────────
-
-class UserBase(BaseModel):
-    email: str
-
-class UserCreate(UserBase):
-    password: str
-
-class User(UserBase):
-    id: int
-    usage_count: int
-
-    class Config:
-        from_attributes = True
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    email: Optional[str] = None

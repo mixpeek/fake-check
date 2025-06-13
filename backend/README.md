@@ -69,7 +69,7 @@ The detection pipeline processes videos through a series of modules to identify 
     ```bash
     python run_server.py
     ```
-    The API will be available at `http://localhost:8000` with interactive docs at `http://localhost:8000/docs`.
+    The API will be available at `http://localhost:8001` with interactive docs at `http://localhost:8001/docs`.
 
 ## API Usage
 
@@ -77,7 +77,7 @@ The detection pipeline processes videos through a series of modules to identify 
 Submits the video and immediately returns a `job_id`.
 
 ```bash
-curl -X POST "http://localhost:8000/api/analyze" \
+curl -X POST "http://localhost:8001/api/analyze" \
   -F "file=@/path/to/your/video.mp4"
 ```
 
@@ -85,14 +85,14 @@ curl -X POST "http://localhost:8000/api/analyze" \
 Poll this endpoint with the `job_id` to check the status.
 
 ```bash
-curl "http://localhost:8000/api/status/{job_id}"
+curl "http://localhost:8001/api/status/{job_id}"
 ```
 
 ### 3. Get results
 Once the job status is `completed`, fetch the full analysis from this endpoint.
 
 ```bash
-curl "http://localhost:8000/api/result/{job_id}"
+curl "http://localhost:8001/api/result/{job_id}"
 ```
 The response contains the final label, confidence score, a list of human-readable tags, a `heuristicChecks` object with all module scores, and a detailed `events` timeline.
 

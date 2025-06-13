@@ -9,13 +9,10 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 
-from . import schemas, config, auth
-from .db import models
-from .db.database import engine
+from . import schemas, config
 from .schemas import (
     AnalyzeResponse,
     StatusResponse,
@@ -26,18 +23,12 @@ from .schemas import (
 from .dependencies import get_models
 from .pipeline import run_detection_pipeline
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
-
 # Initialize FastAPI app
 app = FastAPI(
     title="Deepfake Detection API",
     description="API for detecting deepfakes using CLIP, Whisper, and Gemini",
     version="1.0.0"
 )
-
-# Include the auth router
-app.include_router(auth.router)
 
 # CORS middleware for frontend integration
 app.add_middleware(
@@ -118,23 +109,20 @@ async def root():
     }
 
 
+@app.get("/test")
+async def test_endpoint():
+    """Simple test endpoint"""
+    return {"message": "test works"}
+
+
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_video(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    db: Session = Depends(auth.get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    file: UploadFile = File(...)
 ):
     """
     Submit a video for deepfake analysis
     """
-    # Check usage limit
-    if current_user.usage_count >= config.USER_USAGE_LIMIT:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Usage limit of {config.USER_USAGE_LIMIT} analyses reached. Please contact support."
-        )
-
     # Validate file type
     if not file.filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm')):
         raise HTTPException(
@@ -156,11 +144,6 @@ async def analyze_video(
             detail=f"Failed to save uploaded file: {str(e)}"
         )
     
-    # Increment usage count
-    current_user.usage_count += 1
-    db.add(current_user)
-    db.commit()
-
     # Create job state
     jobs[job_id] = JobState(
         job_id=job_id,

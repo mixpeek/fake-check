@@ -1,23 +1,15 @@
 import { useState, useCallback } from 'react';
 import { AnalyzedVideo, HistoryItem } from '../types';
 import { uploadVideo, analyzeVideo } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import { generateVideoThumbnail } from '../lib/utils';
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
 
 export const useVideoDetection = () => {
-  const { token } = useAuth();
   const [currentVideo, setCurrentVideo] = useState<AnalyzedVideo | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const handleFileSelect = useCallback(async (file: File) => {
-    if (!token) {
-      // This case should ideally be prevented by the UI, but it's a good safeguard.
-      alert("Please sign in to upload a video.");
-      return;
-    }
-
     if (file.size > MAX_FILE_SIZE) {
       alert(`File is too large. Max size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
       return;
@@ -35,7 +27,7 @@ export const useVideoDetection = () => {
     setCurrentVideo(videoData);
 
     try {
-      const { id: jobId } = await uploadVideo(file, token, (progress) => {
+      const { id: jobId } = await uploadVideo(file, (progress) => {
         setCurrentVideo(prev => prev ? { ...prev, uploadProgress: progress } : null);
       });
       
@@ -60,7 +52,7 @@ export const useVideoDetection = () => {
       console.error('Analysis failed:', error);
       setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: error.message } : null);
     }
-  }, [token]);
+  }, []);
 
   const resetCurrentVideo = () => {
     setCurrentVideo(null);

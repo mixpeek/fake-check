@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from google.cloud import videointelligence_v1 as vi
+# from google.cloud import videointelligence_v1 as vi  # Disabled for demo
 
 def extract_audio(video_path: str, duration_to_process: Optional[float] = None) -> Optional[str]:
     """
