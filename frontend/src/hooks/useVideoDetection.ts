@@ -60,12 +60,12 @@ export const useVideoDetection = () => {
         errorMessage = 'Video analysis failed on the server. The video might be corrupted or in an unsupported format.';
       } else if (error.message.includes('Upload failed')) {
         errorMessage = 'Failed to upload video. Please check the file format and try again.';
-      } else if (error.message.includes('Network connection error')) {
-        errorMessage = 'Network connection error during analysis. Please check your internet connection and try again.';
-      } else if (error.message.includes('fetch') || error.message.includes('network')) {
-        errorMessage = 'Network connection error. Please check your internet connection and try again.';
-      } else if (!errorMessage || errorMessage === 'Failed to fetch') {
+      } else if (error.message.includes('Persistent network connection issues')) {
+        errorMessage = 'Network connection issues during analysis. Please check your internet connection and try again.';
+      } else if (error.message.includes('Failed to fetch') && !error.message.includes('timeout')) {
         errorMessage = 'Connection lost to analysis service. Please try again.';
+      } else if (!errorMessage) {
+        errorMessage = 'An unexpected error occurred during analysis. Please try again.';
       }
       
       setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: errorMessage } : null);

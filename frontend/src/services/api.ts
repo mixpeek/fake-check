@@ -10,7 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001
 // Configuration for polling
 const POLL_INTERVAL_MS = 3000; // 3 seconds
 const MAX_POLL_ATTEMPTS = 200; // 10 minutes max (200 * 3s = 600s)
-const REQUEST_TIMEOUT_MS = 10000; // 10 seconds per request
+const REQUEST_TIMEOUT_MS = 15000; // 15 seconds per request (increased from 10s)
 
 // Helper function to create fetch with timeout
 const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs: number = REQUEST_TIMEOUT_MS): Promise<Response> => {
@@ -106,10 +106,15 @@ export const getResults = async (jobId: string): Promise<DetectionResult> => {
 
 export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
   let pollAttempts = 0;
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 5; // Allow up to 5 consecutive network errors before giving up
   
   while (pollAttempts < MAX_POLL_ATTEMPTS) {
     try {
       const status = await checkStatus(jobId);
+      
+      // Reset consecutive error count on successful poll
+      consecutiveErrors = 0;
       
       if (status.status === 'completed') {
         return getResults(jobId);
@@ -122,15 +127,28 @@ export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
       pollAttempts++;
       
     } catch (error) {
-      // For network errors, wait a bit and try again (but don't count against poll attempts)
+      consecutiveErrors++;
+      
+      // For network/timeout errors, retry with backoff
       if (error instanceof Error && 
           (error.message.includes('fetch') || 
            error.message.includes('timeout') || 
            error.message.includes('network') ||
-           error.message.includes('Failed to check status'))) {
+           error.message.includes('Failed to check status') ||
+           error.message.includes('Request timeout'))) {
         
-        console.warn(`Network error during polling (attempt ${pollAttempts + 1}): ${error.message}. Retrying in 2 seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.warn(`Network error during polling (attempt ${pollAttempts + 1}, consecutive errors: ${consecutiveErrors}): ${error.message}`);
+        
+        // If too many consecutive errors, give up
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          throw new Error('Persistent network connection issues. Please check your internet connection and try again.');
+        }
+        
+        // Exponential backoff: 2s, 4s, 6s, 8s, 10s
+        const backoffDelay = Math.min(2000 * consecutiveErrors, 10000);
+        console.warn(`Retrying in ${backoffDelay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        
         // Don't increment pollAttempts for network errors
         continue;
       }
