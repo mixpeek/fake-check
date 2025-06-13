@@ -11,13 +11,16 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Model names (matching notebook exactly)
-CLIP_MODEL_NAME = "ViT-L-14"
-CLIP_PRETRAINED = "laion2b_s32b_b82k"
-WHISPER_MODEL_NAME = "large-v3"
+# Model names
+# CLIP_MODEL_NAME = "ViT-L-14"
+# CLIP_PRETRAINED = "laion2b_s32b_b82k"
+# WHISPER_MODEL_NAME = "large-v3"
+CLIP_MODEL_NAME = "ViT-B-32"
+CLIP_PRETRAINED = "laion2b_s34b_b79k"
+WHISPER_MODEL_NAME = "base"
 GEMINI_MODEL_NAME = "gemini-2.5-pro-preview-05-06"
 
-# Processing settings (matching notebook)
+# Processing settings 
 TARGET_FPS = 8
 MAX_VIDEO_DURATION_SEC = 30
 

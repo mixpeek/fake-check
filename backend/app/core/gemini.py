@@ -77,18 +77,33 @@ def _pil_to_b64_jpeg(img: Image.Image) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 async def _run_ffmpeg_probe(video_path: str) -> Dict[str, Any]:
+    def _sync():
+        try:
+            return ffmpeg.probe(video_path)
+        except ffmpeg.Error as e:
+            stderr_output = e.stderr.decode('utf-8') if e.stderr else 'No stderr output'
+            print(f"FFmpeg probe failed: {stderr_output}", file=sys.stderr)
+            raise RuntimeError(f"FFmpeg probe failed: {stderr_output}")
+    
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, ffmpeg.probe, video_path)
+    return await loop.run_in_executor(None, _sync)
 
 async def _run_ffmpeg_extract(video_path: str, start: float,
                               dur: float, out_path: str):
     def _sync():
-        (ffmpeg
-         .input(video_path, ss=start, t=dur)
-         .output(out_path, vcodec="libx264", acodec="aac",
-                 strict="experimental", loglevel="error")
-         .overwrite_output()
-         .run(capture_stdout=True, capture_stderr=True))
+        try:
+            (ffmpeg
+             .input(video_path, ss=start, t=dur)
+             .output(out_path, vcodec="libx264", acodec="aac",
+                     strict="experimental", loglevel="error")
+             .overwrite_output()
+             .run(capture_stdout=True, capture_stderr=True))
+        except ffmpeg.Error as e:
+            # Log the FFmpeg error but don't raise - let the caller handle the missing file
+            stderr_output = e.stderr.decode('utf-8') if e.stderr else 'No stderr output'
+            print(f"FFmpeg extraction failed: {stderr_output}", file=sys.stderr)
+            raise RuntimeError(f"FFmpeg extraction failed: {stderr_output}")
+    
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _sync)
 
@@ -240,7 +255,17 @@ async def gemini_check_lipsync(video_path: str, transcript: Dict[str, Any] | str
     tmp_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
     try:
         # --- 2. Prepare clip and transcript segment ---
-        duration = float((await _run_ffmpeg_probe(video_path))["format"]["duration"])
+        try:
+            duration = float((await _run_ffmpeg_probe(video_path))["format"]["duration"])
+        except RuntimeError as probe_error:
+            logger.warning(f"[{fn}] FFmpeg probe failed: {probe_error}. Skipping lipsync check.")
+            lip_sync_event = {
+                "module": "lip_sync", "event": "check_failed", 
+                "ts": 0.0, "dur": 0.0,
+                "meta": {"reason": "Could not read video metadata."}
+            }
+            return {"flag": 1, "event": lip_sync_event}
+            
         clip_len, start_time = 2.0, 0.0
         transcript_segment = transcript_to_use[:500]
 
@@ -253,10 +278,26 @@ async def gemini_check_lipsync(video_path: str, transcript: Dict[str, Any] | str
                 words_in_seg = [w["word"] for w in words if first_word_start <= w.get("start", 0) <= end_time]
                 transcript_segment = " ".join(words_in_seg)
         
-        await _run_ffmpeg_extract(video_path, start_time, clip_len, tmp_clip)
+        try:
+            await _run_ffmpeg_extract(video_path, start_time, clip_len, tmp_clip)
+        except RuntimeError as ffmpeg_error:
+            # FFmpeg extraction failed (likely no audio track or corrupted audio)
+            logger.warning(f"[{fn}] FFmpeg extraction failed: {ffmpeg_error}. Skipping lipsync check.")
+            lip_sync_event = {
+                "module": "lip_sync", "event": "check_failed", 
+                "ts": round(start_time, 2), "dur": round(clip_len, 2),
+                "meta": {"reason": "Video has no audio track or audio extraction failed."}
+            }
+            return {"flag": 1, "event": lip_sync_event}
 
         if not os.path.exists(tmp_clip) or os.path.getsize(tmp_clip) == 0:
-            raise RuntimeError("FFmpeg failed to create a valid video clip.")
+            logger.warning(f"[{fn}] FFmpeg created empty or missing clip file. Skipping lipsync check.")
+            lip_sync_event = {
+                "module": "lip_sync", "event": "check_failed",
+                "ts": round(start_time, 2), "dur": round(clip_len, 2),
+                "meta": {"reason": "FFmpeg failed to create a valid video clip."}
+            }
+            return {"flag": 1, "event": lip_sync_event}
 
         # --- 3. Ask Gemini for analysis ---
         clip_b64 = base64.b64encode(open(tmp_clip, "rb").read()).decode()

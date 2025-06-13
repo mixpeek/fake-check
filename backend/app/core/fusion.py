@@ -20,10 +20,10 @@ def fuse_detection_scores(
     gem_sync_flag: int,       # 0 or 1 (1 if lip-sync issue detected)
     gemini_blink_flag: int,   # 0 or 1 (1 if abnormal blinks detected by Gemini)
     other_scores: Dict[str, float] # New parameter for heuristic module scores
-) -> Tuple[float, str, List[str]]:
+) -> Tuple[float, str, List[str], float]:
     """
     Fuses multiple detection scores and flags into an overall deepfake confidence,
-    a final label, and a list of anomaly tags.
+    a final label, a list of anomaly tags, and confidence in the label.
 
     Args:
         clip_score: Visual authenticity score from CLIP (0-1).
@@ -37,6 +37,7 @@ def fuse_detection_scores(
             - overall_deepfake_confidence (float): Combined confidence score (0-1).
             - final_label (str): "LIKELY_REAL", "UNCERTAIN", or "LIKELY_FAKE".
             - anomaly_tags (List[str]): List of detected anomaly tags.
+            - label_confidence (float): How confident we are in our prediction (0-1).
     """
 
     # Calculate the weighted sum for overall deepfake confidence.
@@ -68,6 +69,22 @@ def fuse_detection_scores(
         final_label = "LIKELY_REAL"
     elif overall_deepfake_confidence > FAKE_CONFIDENCE_THRESHOLD:
         final_label = "LIKELY_FAKE"
+    
+    # Simple, intuitive confidence calculation:
+    # - For LIKELY_FAKE: use the raw deepfake confidence (64% fake = 64% confidence)
+    # - For LIKELY_REAL: invert it (20% fake = 80% confidence it's real)
+    # - For UNCERTAIN: use distance from middle of uncertain range
+    if final_label == "LIKELY_FAKE":
+        label_confidence = overall_deepfake_confidence
+    elif final_label == "LIKELY_REAL":
+        label_confidence = 1.0 - overall_deepfake_confidence
+    else:  # UNCERTAIN
+        # For uncertain, confidence is based on how close we are to the middle (0.45)
+        uncertain_middle = (REAL_CONFIDENCE_THRESHOLD + FAKE_CONFIDENCE_THRESHOLD) / 2  # 0.45
+        distance_from_middle = abs(overall_deepfake_confidence - uncertain_middle)
+        max_distance = (FAKE_CONFIDENCE_THRESHOLD - REAL_CONFIDENCE_THRESHOLD) / 2  # 0.15
+        # Closer to middle = higher confidence in uncertainty
+        label_confidence = 0.5 + (1 - distance_from_middle / max_distance) * 0.3
         
     # Generate anomaly tags based on individual signal thresholds and flags.
     anomaly_tags = []
@@ -83,4 +100,4 @@ def fuse_detection_scores(
     if gemini_blink_flag == 1: # If Gemini flagged abnormal blinks
         anomaly_tags.append("GEMINI_ABNORMAL_BLINKS")
     
-    return round(overall_deepfake_confidence, 3), final_label, anomaly_tags
+    return round(overall_deepfake_confidence, 3), final_label, anomaly_tags, round(label_confidence, 3)

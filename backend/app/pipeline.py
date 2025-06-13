@@ -169,17 +169,18 @@ async def run_detection_pipeline(
         }
         logger.info(f"[{run_id}] Scores for fusion: CLIP={clip_score:.3f}, Gemini Visual={vis_flag}, Gemini Lipsync={lip_flag}, Gemini Blink={blink_flag}, Others={other_scores_for_fusion}")
 
-        final_conf, final_label, fusion_generated_tags = fusion.fuse_detection_scores(
+        final_conf, final_label, fusion_generated_tags, label_confidence = fusion.fuse_detection_scores(
             clip_score,
             vis_flag,
             lip_flag,
             blink_flag,
             other_scores=other_scores_for_fusion
         )
-        logger.info(f"[{run_id}] Fusion completed. Confidence: {final_conf:.3f}, Label: {final_label}, Tags: {fusion_generated_tags}")
+        logger.info(f"[{run_id}] Fusion completed. Confidence: {final_conf:.3f}, Label: {final_label}, Label Confidence: {label_confidence:.3f}, Tags: {fusion_generated_tags}")
 
         detection_results.update({
             "deepfake_confidence_overall": final_conf,
+            "label_confidence": label_confidence,
             "final_predicted_label": final_label,
         })
 

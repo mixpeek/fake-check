@@ -235,7 +235,7 @@ async def get_job_result(job_id: str):
             "id": job.result.get("run_id", job_id),
             "isReal": job.result.get("final_predicted_label", "ERROR_IN_PROCESSING") == "LIKELY_REAL",
             "label": job.result.get("final_predicted_label", "ERROR_IN_PROCESSING"),
-            "confidenceScore": 1.0 - job.result.get("deepfake_confidence_overall", 0.0),  # Invert for intuitive score
+            "confidenceScore": job.result.get("label_confidence", 0.5),  # Use label confidence instead of inverted score
             "processedAt": job.completed_at.isoformat() + "Z" if job.completed_at else "N/A",
             "tags": _map_anomaly_tags(job.result.get("anomaly_tags_detected", [])),
             "details": {

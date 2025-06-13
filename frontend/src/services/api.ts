@@ -105,40 +105,40 @@ export const getResults = async (jobId: string): Promise<DetectionResult> => {
 };
 
 export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
-  let attempts = 0;
+  let pollAttempts = 0;
   
-  while (attempts < MAX_POLL_ATTEMPTS) {
+  while (pollAttempts < MAX_POLL_ATTEMPTS) {
     try {
       const status = await checkStatus(jobId);
       
       if (status.status === 'completed') {
         return getResults(jobId);
       } else if (status.status === 'failed') {
-        throw new Error('Analysis failed');
+        throw new Error('Analysis failed on backend');
       }
       
-      // Wait before next poll
+      // Wait before next poll attempt
       await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-      attempts++;
+      pollAttempts++;
       
     } catch (error) {
-      attempts++;
-      
-      // If it's a network error and we haven't exceeded max attempts, retry
-      if (attempts < MAX_POLL_ATTEMPTS && 
-          (error instanceof Error && 
-           (error.message.includes('fetch') || 
-            error.message.includes('timeout') || 
-            error.message.includes('network')))) {
-        console.warn(`Polling attempt ${attempts} failed, retrying in ${POLL_INTERVAL_MS}ms:`, error.message);
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      // For network errors, wait a bit and try again (but don't count against poll attempts)
+      if (error instanceof Error && 
+          (error.message.includes('fetch') || 
+           error.message.includes('timeout') || 
+           error.message.includes('network') ||
+           error.message.includes('Failed to check status'))) {
+        
+        console.warn(`Network error during polling (attempt ${pollAttempts + 1}): ${error.message}. Retrying in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Don't increment pollAttempts for network errors
         continue;
       }
       
-      // For other errors or if we've exceeded max attempts, throw
+      // For non-network errors, throw immediately
       throw error;
     }
   }
   
-  throw new Error(`Analysis timeout: No response after ${MAX_POLL_ATTEMPTS} attempts (${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000 / 60} minutes)`);
+  throw new Error(`Analysis timeout: No response after ${MAX_POLL_ATTEMPTS} poll attempts (${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000 / 60} minutes)`);
 };
