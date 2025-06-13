@@ -15,13 +15,13 @@ The platform allows users to upload a video file, which is then analyzed by a so
 
 Before you begin, ensure you have the following installed on your system:
 
-*   **Python 3.9+**
+*   **Python 3.10**
 *   **Node.js v18+**
 *   **FFmpeg**: (`brew install ffmpeg` on macOS or `sudo apt-get install ffmpeg` on Debian/Ubuntu)
 *   **API Keys**:
     *   Google Gemini API Key
     *   HuggingFace Token (for model downloads)
-    *   **Google Cloud Credentials**: A JSON key file for a service account with the Video Intelligence API enabled.
+    *   Optional: Google Cloud Credentials - A JSON key file for a service account with the Video Intelligence API enabled. Only add if you enable Google Video Intelligence lighting shift detection.
 
 ## Getting Started
 
@@ -45,7 +45,7 @@ First, let's get the backend server running.
 
 2.  **Create and activate a Python virtual environment:**
     ```bash
-    python3 -m venv venv
+    python3.10 -m venv venv
     source venv/bin/activate
     # On Windows, use: venv\Scripts\activate
     ```
@@ -64,7 +64,7 @@ First, let's get the backend server running.
     ```dotenv
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
-    GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json"
+    GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json" # Optional: Disabled by Default
     ```
 
 5.  **Run the Backend Server:**

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { AnalyzedVideo, HistoryItem } from '../types';
 import { uploadVideo, analyzeVideo } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { generateVideoThumbnail } from '../lib/utils';
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
 
@@ -44,10 +45,12 @@ export const useVideoDetection = () => {
       
       setCurrentVideo(prev => prev ? { ...prev, status: 'completed', result } : null);
       
+      const thumbnailUrl = await generateVideoThumbnail(file);
+      
       const newHistoryItem: HistoryItem = {
         id: jobId,
         filename: file.name,
-        thumbnailUrl: URL.createObjectURL(file),
+        thumbnailUrl: thumbnailUrl,
         result: result,
         analyzedAt: new Date().toLocaleString(),
       };

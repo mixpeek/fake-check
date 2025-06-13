@@ -65,7 +65,7 @@ export const ExampleVideos: React.FC<ExampleVideosProps> = ({ onSelect }) => {
               <video
                 src={video.path}
                 className="w-full h-full object-cover opacity-80"
-                preload="metadata"
+                preload="auto"
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
                 <div className="rounded-full bg-white bg-opacity-90 p-3 transform group-hover:scale-110 transition-transform">

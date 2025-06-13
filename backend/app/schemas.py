@@ -68,7 +68,7 @@ class AnomalyEvent(BaseModel):
     """
     module: Literal[
         "gibberish_text", "flow", "lip_sync",
-        "crossmodal", "video_ai",
+        "crossmodal",
         "gemini_visual", "gemini_blink"
     ] = Field(..., description="Detector module that raised the event")
     event: str = Field(..., description="Event code (e.g. 'gibberish_text')")

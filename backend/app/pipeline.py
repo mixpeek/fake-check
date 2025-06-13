@@ -16,15 +16,12 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from PIL import Image
 
-# -- original core modules --
-from .core import video
-from .core import models
-from .core import gemini          # now hosts OCR too
-from .core import fusion
 from . import config
-
-# -- NEW heuristic detectors --
 from .core import (
+    video,
+    models,
+    gemini,
+    fusion,
     flow,
 )
 
@@ -156,18 +153,19 @@ async def run_detection_pipeline(
         flow_res  = flow.detect_spikes(frames, fps)
         logger.info(f"[{run_id}] Completed flow.detect_spikes. Score: {flow_res.get('score', -1):.2f}, Anomaly: {flow_res.get('anomaly', 'N/A')}, Events: {len(flow_res.get('events', []))}")
 
-        logger.info(f"[{run_id}] Starting heuristic: video.detect_lighting_jumps")
-        shot_res  = video.detect_lighting_jumps(video_path)
-        logger.info(f"[{run_id}] Completed video.detect_lighting_jumps. Score: {shot_res.get('score', -1):.2f}, Anomaly: {shot_res.get('anomaly', 'N/A')}, Events: {len(shot_res.get('events', []))}")
+        # logger.info(f"[{run_id}] Starting heuristic: video.detect_lighting_jumps")
+        # shot_res  = video.detect_lighting_jumps(video_path)
+        # logger.info(f"[{run_id}] Completed video.detect_lighting_jumps. Score: {shot_res.get('score', -1):.2f}, Anomaly: {shot_res.get('anomaly', 'N/A')}, Events: {len(shot_res.get('events', []))}")
 
         # gather for fusion & timeline
-        module_results = [flow_res, shot_res]
+        # NOTE: video.detect_lighting_jumps (shot_res) is disabled
+        module_results = [flow_res]
 
         logger.info(f"[{run_id}] Step 6: Fusing detection scores.")
         other_scores_for_fusion = {
             "gibberish": gibberish_score_val,
             "flow": flow_res.get("score", 0.0),
-            "video_ai": shot_res.get("score", 0.0)
+            # "video_ai": shot_res.get("score", 0.0) # Disabled
         }
         logger.info(f"[{run_id}] Scores for fusion: CLIP={clip_score:.3f}, Gemini Visual={vis_flag}, Gemini Lipsync={lip_flag}, Gemini Blink={blink_flag}, Others={other_scores_for_fusion}")
 
@@ -187,7 +185,8 @@ async def run_detection_pipeline(
 
         # Aggregate all anomaly tags
         all_detected_tags = list(fusion_generated_tags)
-        module_results_for_tags = [flow_res, shot_res]
+        # NOTE: video.detect_lighting_jumps (shot_res) is disabled
+        module_results_for_tags = [flow_res]
         for res_dict in module_results_for_tags:
             all_detected_tags.extend(res_dict.get("tags", []))
         # Add gibberish tag if score indicates anomaly
@@ -204,15 +203,17 @@ async def run_detection_pipeline(
             "gemini_blink_abnormality": blink_flag,
             "gibberish":           gibberish_score_val,
             "flow":          flow_res.get("score", 0.0),
-            "video_ai":      shot_res.get("score", 0.0),
+            # "video_ai":      shot_res.get("score", 0.0), # Disabled
         }
         detection_results["heuristicChecks"] = heuristic_checks
         logger.info(f"[{run_id}] heuristicChecks prepared: {heuristic_checks}")
 
         logger.info(f"[{run_id}] Step 8: Aggregating timeline events.")
         timeline_events: List[Dict[str, Any]] = []
+
         # Add events from non-Gemini heuristic modules
-        non_gemini_module_results = [flow_res, shot_res]
+        # NOTE: video.detect_lighting_jumps (shot_res) is disabled
+        non_gemini_module_results = [flow_res]
         for res in non_gemini_module_results: 
             timeline_events.extend(res.get("events", []))
         timeline_events.extend(gemini_timeline_events)

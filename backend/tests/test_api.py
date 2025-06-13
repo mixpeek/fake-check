@@ -3,14 +3,54 @@ import time
 import os
 import json
 
-def analyze_video(video_path: str):
+BASE_URL = "http://localhost:8000/api"
+TEST_USER_EMAIL = "test2@example.com"
+TEST_USER_PASSWORD = "password123"
+
+def get_auth_token(email, password):
+    """
+    Logs in a user and returns the auth token.
+    If the user doesn't exist, it signs them up first.
+    """
+    login_url = f"{BASE_URL}/auth/login"
+    signup_url = f"{BASE_URL}/auth/signup"
+    
+    # 1. Try to log in first
+    login_data = {'username': email, 'password': password}
+    response = requests.post(login_url, data=login_data)
+    
+    # 2. If login fails (user might not exist), sign up
+    if response.status_code != 200:
+        print("Login failed, attempting to sign up user...")
+        signup_data = {'email': email, 'password': password}
+        signup_response = requests.post(signup_url, json=signup_data)
+        
+        if signup_response.status_code != 200:
+            # If signup fails for a reason other than "already exists", raise an error.
+            if "already registered" not in signup_response.text:
+                 raise Exception(f"Signup failed: {signup_response.text}")
+            print("User already exists, proceeding with login.")
+        else:
+            print("✅ User signed up successfully.")
+
+        # 3. Log in again after successful signup or if user already existed
+        response = requests.post(login_url, data=login_data)
+        if response.status_code != 200:
+            raise Exception(f"Login failed after signup attempt: {response.text}")
+
+    print("✅ Successfully logged in.")
+    return response.json()['access_token']
+
+
+def analyze_video(video_path: str, token: str):
     # 1. Upload video and get job_id
-    url = "http://localhost:8000/api/analyze"
+    url = f"{BASE_URL}/analyze"
+    headers = {"Authorization": f"Bearer {token}"}
     
     print(f"\nUploading video: {os.path.basename(video_path)}")
     with open(video_path, 'rb') as f:
         files = {'file': f}
-        response = requests.post(url, files=files)
+        response = requests.post(url, files=files, headers=headers)
     
     if response.status_code != 200:
         raise Exception(f"Upload failed: {response.text}")
@@ -21,7 +61,7 @@ def analyze_video(video_path: str):
     # 2. Poll status until complete
     print("\nWaiting for analysis to complete...")
     while True:
-        status_response = requests.get(f"http://localhost:8000/api/status/{job_id}")
+        status_response = requests.get(f"{BASE_URL}/status/{job_id}")
         status_data = status_response.json()
         
         if status_data['status'] == 'completed':
@@ -34,18 +74,19 @@ def analyze_video(video_path: str):
     
     # 3. Get results
     print("\nFetching results...")
-    result_response = requests.get(f"http://localhost:8000/api/result/{job_id}")
+    result_response = requests.get(f"{BASE_URL}/result/{job_id}")
     return result_response.json()
 
 if __name__ == "__main__":
     # Path to the test video
-    # video_path = "videos_for_testing/Puppramin.mp4"
-    # video_path = "videos_for_testing/fake_la.mp4"
-    video_path = "videos_for_testing/fake_kangaroo.mp4"
-
+    video_path = "../videos_for_testing/fake_la.mp4"
 
     try:
-        result_data = analyze_video(video_path) # Renamed variable for clarity
+        # Get auth token
+        auth_token = get_auth_token(TEST_USER_EMAIL, TEST_USER_PASSWORD)
+        
+        # Analyze video with token
+        result_data = analyze_video(video_path, auth_token)
 
         # --- Full API Response for Frontend ---
         print("\n--- Full API Response (for Frontend) ---")
@@ -95,7 +136,6 @@ if __name__ == "__main__":
             for key, name in score_map.items():
                 if key in heuristic_checks:
                     score = heuristic_checks[key]
-                    # The Gemini flags are 0 or 1, others are floats. Unified printing works fine.
                     print(f"    • {name:<30}: {score:.3f}")
         else:
             print("    • No heuristic scores reported.")

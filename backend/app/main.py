@@ -65,6 +65,8 @@ async def process_video_background(job_id: str, video_path: str):
     """
     Background task to process video
     """
+    print(f"--- ✅ BACKGROUND TASK STARTED for job_id: {job_id} ---", flush=True)
+
     try:
         # Update job status
         jobs[job_id].status = JobStatus.PROCESSING

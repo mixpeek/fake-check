@@ -21,7 +21,7 @@ The detection pipeline processes videos through a series of modules to identify 
 4.  **Heuristic Detectors**: A set of specialized modules target specific, common deepfake indicators:
     *   `core/flow.py`: Detects unusual spikes in **optical flow** and sudden drops in **frame similarity (SSIM)**, indicating jarring transitions.
     *   `core/audio.py`: Analyzes the audio waveform for **loops** using autocorrelation.
-    *   `core/video.py`: Uses the Google Cloud Video Intelligence API to find unnaturally short **shot changes** and lighting jumps.
+    *    Optional - `core/video.py`: Uses the Google Cloud Video Intelligence API to find unnaturally short **shot changes** and lighting jumps.
 
 5.  **Fusion Engine**: The scores and flags from all preceding modules are fed into a weighted fusion model (`core/fusion.py`). This engine calculates the final `overall_deepfake_confidence` score and assigns a label: `LIKELY_REAL`, `UNCERTAIN`, or `LIKELY_FAKE`.
 
@@ -57,6 +57,7 @@ The detection pipeline processes videos through a series of modules to identify 
     ```dotenv
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
+    GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json" # Optional: Disabled by Default
     ```
 
 4.  **Set Google Cloud Credentials**: Ensure the path to your Google Cloud JSON key file is set as an environment variable.
