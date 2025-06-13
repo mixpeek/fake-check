@@ -186,12 +186,6 @@ export const DetectionResult: React.FC<DetectionResultProps> = ({ result, videoU
       description: 'Analyzes movement consistency and flow.',
       failed: details.heuristicChecks.flow > 0.5,
       events: details.events.filter(e => e.module === 'flow')
-    },
-    {
-      title: 'Light Changes Analysis',
-      description: 'Detects unnatural lighting changes.',
-      failed: details.heuristicChecks.video_ai > 0.5,
-      events: details.events.filter(e => e.module === 'video_ai')
     }
   ];
 

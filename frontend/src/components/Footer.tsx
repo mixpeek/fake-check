@@ -16,10 +16,20 @@ export const Footer: React.FC = () => {
             Advanced AI-powered deepfake detection for everyone. Helping combat misinformation in the digital age.
           </p>
           <div className="mt-4 flex space-x-4 justify-center">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+            <a 
+              href="https://x.com/mixpeek" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
               <Twitter className="h-5 w-5" />
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+            <a 
+              href="https://github.com/mixpeek/fake-check" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
               <Github className="h-5 w-5" />
             </a>
           </div>

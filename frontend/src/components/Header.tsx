@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScanFace, Github } from 'lucide-react';
+import { ScanFace, Github, ExternalLink } from 'lucide-react';
 
 export const Header: React.FC = () => {
   return (
@@ -27,7 +27,15 @@ export const Header: React.FC = () => {
             </nav>
           </div>
           <div className="flex items-center space-x-4">
-            {/* Right side content removed */}
+            <a
+              href="https://mixpeek.com/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+            >
+              <span>Contact Us</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </div>
