@@ -51,8 +51,8 @@ export const useVideoDetection = () => {
     } catch (error: any) {
       console.error('Analysis failed:', error);
       
-      // Provide more specific error messages
-      let errorMessage = error.message;
+      // Simple error handling
+      let errorMessage = error.message || 'An unexpected error occurred during analysis. Please try again.';
       
       if (error.message.includes('Analysis timeout')) {
         errorMessage = 'Analysis timeout. The video processing took longer than expected. Please try again with a shorter video.';
@@ -60,12 +60,6 @@ export const useVideoDetection = () => {
         errorMessage = 'Video analysis failed on the server. The video might be corrupted or in an unsupported format.';
       } else if (error.message.includes('Upload failed')) {
         errorMessage = 'Failed to upload video. Please check the file format and try again.';
-      } else if (error.message.includes('Persistent network connection issues')) {
-        errorMessage = 'Network connection issues during analysis. Please check your internet connection and try again.';
-      } else if (error.message.includes('Failed to fetch') && !error.message.includes('timeout')) {
-        errorMessage = 'Connection lost to analysis service. Please try again.';
-      } else if (!errorMessage) {
-        errorMessage = 'An unexpected error occurred during analysis. Please try again.';
       }
       
       setCurrentVideo(prev => prev ? { ...prev, status: 'error', error: errorMessage } : null);
