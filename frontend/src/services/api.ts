@@ -73,7 +73,8 @@ export const checkStatus = async (jobId: string): Promise<{
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
 }> => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/status/${jobId}`);
+  // Use a longer timeout for status checks since backend might be busy with Gemini calls
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/status/${jobId}`, {}, 120000); // 2 minute timeout
   if (!response.ok) {
     throw new Error('Failed to check status');
   }
@@ -81,7 +82,7 @@ export const checkStatus = async (jobId: string): Promise<{
 };
 
 export const getResults = async (jobId: string): Promise<DetectionResult> => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/result/${jobId}`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/result/${jobId}`, {}, 120000); // 2 minute timeout
   if (!response.ok) {
     throw new Error('Failed to fetch results');
   }
@@ -118,10 +119,15 @@ export const getResults = async (jobId: string): Promise<DetectionResult> => {
 
 export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
   let pollAttempts = 0;
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 3;
   
   while (pollAttempts < MAX_POLL_ATTEMPTS) {
     try {
       const status = await checkStatus(jobId);
+      
+      // Reset consecutive error count on successful request
+      consecutiveErrors = 0;
       
       if (status.status === 'completed') {
         return getResults(jobId);
@@ -134,22 +140,33 @@ export const analyzeVideo = async (jobId: string): Promise<DetectionResult> => {
       pollAttempts++;
       
     } catch (error) {
+      consecutiveErrors++;
+      
       console.error('Polling error details:', {
         error: error,
         message: error instanceof Error ? error.message : 'Unknown error',
         pollAttempt: pollAttempts + 1,
+        consecutiveErrors: consecutiveErrors,
         timestamp: new Date().toISOString()
       });
       
-      // If it's a timeout or network error, retry without counting against poll attempts
+      // If we've had too many consecutive errors, give up
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        throw new Error(`Too many consecutive polling errors (${consecutiveErrors}). The backend may be experiencing issues.`);
+      }
+      
+      // For timeout/network errors, wait longer before retrying
       if (error instanceof Error && 
           (error.message.includes('timeout') || 
            error.message.includes('Request timeout') ||
            error.message.includes('Failed to fetch'))) {
         
-        console.warn(`Request timeout during polling (attempt ${pollAttempts + 1}). Backend is busy with long operations. Retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
-        continue; // Don't increment pollAttempts
+        console.warn(`Request timeout during polling (attempt ${pollAttempts + 1}, consecutive errors: ${consecutiveErrors}). Backend is busy with long Gemini operations. Waiting longer before retry...`);
+        
+        // Wait progressively longer for consecutive errors
+        const waitTime = Math.min(10000 + (consecutiveErrors * 5000), 30000); // 10s, 15s, 20s, max 30s
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue; // Don't increment pollAttempts for timeouts
       }
       
       // For other errors, throw immediately
