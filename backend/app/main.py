@@ -8,6 +8,7 @@ from typing import Dict
 from pathlib import Path
 import tempfile
 import shutil
+import time
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -115,6 +116,16 @@ async def test_endpoint():
     return {"message": "test works"}
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for debugging connectivity"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "message": "Backend is running normally"
+    }
+
+
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_video(
     background_tasks: BackgroundTasks,
@@ -123,6 +134,9 @@ async def analyze_video(
     """
     Submit a video for deepfake analysis
     """
+    start_time = time.time()
+    print(f"🔄 Upload started for file: {file.filename} ({file.size} bytes)", flush=True)
+    
     # Validate file type
     if not file.filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm')):
         raise HTTPException(
@@ -132,13 +146,17 @@ async def analyze_video(
     
     # Generate job ID
     job_id = str(uuid.uuid4())
+    print(f"🆔 Generated job ID: {job_id} (elapsed: {time.time() - start_time:.2f}s)", flush=True)
     
     # Save uploaded file temporarily
     temp_path = TEMP_DIR / f"{job_id}_{file.filename}"
     try:
+        print(f"💾 Starting file save to: {temp_path} (elapsed: {time.time() - start_time:.2f}s)", flush=True)
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        print(f"✅ File saved successfully (elapsed: {time.time() - start_time:.2f}s)", flush=True)
     except Exception as e:
+        print(f"❌ File save failed: {e} (elapsed: {time.time() - start_time:.2f}s)", flush=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save uploaded file: {str(e)}"
@@ -151,6 +169,7 @@ async def analyze_video(
         created_at=datetime.utcnow(),
         filename=file.filename
     )
+    print(f"📝 Job state created (elapsed: {time.time() - start_time:.2f}s)", flush=True)
     
     # Add background task
     background_tasks.add_task(
@@ -158,12 +177,15 @@ async def analyze_video(
         job_id=job_id,
         video_path=str(temp_path)
     )
+    print(f"🚀 Background task queued (elapsed: {time.time() - start_time:.2f}s)", flush=True)
     
-    return AnalyzeResponse(
+    response = AnalyzeResponse(
         job_id=job_id,
         message="Video submitted for analysis",
         status=JobStatus.PENDING
     )
+    print(f"✅ Upload endpoint completed (total time: {time.time() - start_time:.2f}s)", flush=True)
+    return response
 
 
 @app.get("/api/status/{job_id}", response_model=StatusResponse)
