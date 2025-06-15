@@ -363,57 +363,73 @@ async def gemini_detect_gibberish(
     MAX_OCR_FRAMES_TO_PROCESS = 10
     selected_frames_with_indices: List[Tuple[int, Image.Image]] = []
 
+    # Improved frame selection logic
     if len(frames) <= MAX_OCR_FRAMES_TO_PROCESS:
         selected_frames_with_indices = list(enumerate(frames))
+        logger.info(f"[{fn}] Using all {len(frames)} frames (under max limit).")
     else:
+        # Use np.linspace for even distribution, then ensure unique indices
         indices_to_pick = np.linspace(0, len(frames) - 1, num=MAX_OCR_FRAMES_TO_PROCESS, dtype=int)
         unique_indices = sorted(list(set(indices_to_pick)))
         selected_frames_with_indices = [(i, frames[i]) for i in unique_indices]
         if len(selected_frames_with_indices) > MAX_OCR_FRAMES_TO_PROCESS:
             selected_frames_with_indices = selected_frames_with_indices[:MAX_OCR_FRAMES_TO_PROCESS]
+        logger.info(f"[{fn}] Selected {len(selected_frames_with_indices)} frames from {len(frames)} total frames.")
 
-    logger.info(f"[{fn}] Processing {len(selected_frames_with_indices)} selected frames for gibberish check.")
-    frames_successfully_processed_count = 0
-    gibberish_found_count = 0
+    logger.info(f"[{fn}] Processing {len(selected_frames_with_indices)} selected frames for gibberish check in single API call.")
+    
+    prompt = (
+        "Examine each of the following images for any text. For each image, determine if the text is "
+        "nonsensical, gibberish, or clearly corrupted (e.g., random characters, garbled words). "
+        "Respond with a list of YES or NO for each image in order. For example: YES, NO, YES, NO"
+    )
+    
+    parts = [prompt] + [
+        {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(frame)}
+        for original_idx, frame in selected_frames_with_indices
+    ]
+    
+    try:
+        call_t0 = time.monotonic()
+        resp = await safe_generate_content(model, parts)
+        call_t1 = time.monotonic()
+        logger.debug(f"[{fn}] Single API call for all frames took {call_t1 - call_t0:.2f}s.")
 
-    for frame_counter, (original_idx, frame) in enumerate(selected_frames_with_indices):
-        logger.debug(f"[{fn}] Checking for gibberish in selected frame {frame_counter+1}/{len(selected_frames_with_indices)} (original index: {original_idx}).")
+        text_response = _extract_text(resp, fn).strip()
+        logger.debug(f"[{fn}] Gemini response: '{text_response}'")
+
+        # Improved response parsing
+        response_parts = [part.strip().upper() for part in text_response.split(',')]
+        gibberish_found_count = 0
         
-        prompt = (
-            "Examine the image for any text. Is the text nonsensical, gibberish, "
-            "or clearly corrupted (e.g., random characters, garbled words)? "
-            "Respond with only YES or NO."
-        )
-        parts = [
-            prompt,
-            {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(frame)},
-        ]
-        try:
-            call_t0 = time.monotonic()
-            resp = await safe_generate_content(model, parts)
-            call_t1 = time.monotonic()
-            logger.debug(f"[{fn}] API call for frame {original_idx} took {call_t1 - call_t0:.2f}s.")
+        for i, (original_idx, frame) in enumerate(selected_frames_with_indices):
+            # More robust response parsing
+            if i < len(response_parts):
+                response = response_parts[i]
+                if "YES" in response:
+                    gibberish_found_count += 1
+                    ts = round(original_idx / fps, 2)
+                    events.append({
+                        "module": "gibberish_text",
+                        "event": "gibberish_text_detected",
+                        "ts": ts,
+                        "dur": 0.0,
+                        "meta": {
+                            "response": response,
+                            "frame_index": original_idx,
+                            "frame_time": ts
+                        }
+                    })
+            else:
+                logger.warning(f"[{fn}] No response for frame {i} (index {original_idx}).")
 
-            text_response = _extract_text(resp, fn).strip()
-            logger.debug(f"[{fn}] Gemini response for frame {original_idx}: '{text_response}'")
+        frames_successfully_processed_count = len(selected_frames_with_indices)
+        logger.info(f"[{fn}] Finished gibberish check. Processed {frames_successfully_processed_count} frames in single call. Found gibberish in {gibberish_found_count} frames.")
 
-            if "YES" in text_response:
-                gibberish_found_count += 1
-                ts = round(original_idx / fps, 2)
-                events.append({
-                    "module": "gibberish_text",
-                    "event": "gibberish_text_detected",
-                    "ts": ts,
-                    "dur": 0.0,
-                    "meta": {"response": text_response}
-                })
-            
-            frames_successfully_processed_count += 1
-
-        except Exception as e:
-            logger.error(f"[{fn}] Error processing gibberish check for frame {original_idx}: {e}", exc_info=True)
-
-    logger.info(f"[{fn}] Finished gibberish check. Processed {frames_successfully_processed_count}/{len(selected_frames_with_indices)} frames. Found gibberish in {gibberish_found_count} frames.")
+    except Exception as e:
+        logger.error(f"[{fn}] Error processing gibberish check: {e}", exc_info=True)
+        frames_successfully_processed_count = 0
+        gibberish_found_count = 0
     
     # The score is proportional to the number of frames with gibberish.
     score = (gibberish_found_count / len(selected_frames_with_indices)) if selected_frames_with_indices else 0.0
@@ -472,20 +488,9 @@ async def run_gemini_inspections(
         logger.warning(f"[{fn_orchestrator}] No tasks enabled. Returning default values.")
         return 0, 0, 0, 0.0, []
 
-    results_list = [] # Stores the actual results or exceptions
-    logger.info(f"[{fn_orchestrator}] Sequentially awaiting {len(tasks_coroutines)} tasks: {keys}")
-    for i, task_coro in enumerate(tasks_coroutines):
-        key = keys[i]
-        logger.info(f"[{fn_orchestrator}] Attempting to await task: {key} (index {i})")
-        try:
-            result = await task_coro
-            results_list.append(result)
-            logger.info(f"[{fn_orchestrator}] Successfully awaited task: {key}")
-        except Exception as e:
-            logger.error(f"[{fn_orchestrator}] Exception while awaiting task {key}: {type(e).__name__} - {e}", exc_info=True)
-            results_list.append(e) # Store exception to be processed like gather does
-    
-    logger.info(f"[{fn_orchestrator}] All tasks awaited individually. Results count: {len(results_list)}")
+    logger.info(f"[{fn_orchestrator}] Running {len(tasks_coroutines)} tasks in parallel: {keys}")
+    results_list = await asyncio.gather(*tasks_coroutines, return_exceptions=True)
+    logger.info(f"[{fn_orchestrator}] All tasks completed in parallel. Results count: {len(results_list)}")
 
     vis = blink = 0
     lip_flag = 0
