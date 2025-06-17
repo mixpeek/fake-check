@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ───────────────────────── video snippet configuration ──────────────────────────
 SNIPPET_DURATION = 3.0  # seconds
 BLINK_CHECK_DURATION = 5.0  # seconds
-EXTRACTION_TIMEOUT = 30  # seconds per clip
+EXTRACTION_TIMEOUT = 60  # seconds per clip 
 MIN_VIDEO_LENGTH = 5.0  # seconds
 
 def calculate_clip_times(video_duration: float) -> Dict[str, Any]:
@@ -64,7 +64,7 @@ def calculate_clip_times(video_duration: float) -> Dict[str, Any]:
         }
 
 # 1) Async-client protobuf bug work-around
-async def safe_generate_content(model, content, *, max_retries: int = 2):
+async def safe_generate_content(model, content, *, max_retries: int = 3):
     """
     Call model.generate_content_async(content).  Works around the protobuf
     '__await__' bug and retries on transient connection resets.
@@ -264,9 +264,15 @@ async def gemini_check_visual_artifacts(frames_or_clips, model) -> int:
         parts = [prompt]
         for clip_path in frames_or_clips:
             if os.path.exists(clip_path):
+                # Use the correct inline_data format for Gemini API
                 with open(clip_path, "rb") as f:
                     clip_data = base64.b64encode(f.read()).decode()
-                    parts.append({"mime_type": "video/mp4", "data": clip_data})
+                    parts.append({
+                        "inline_data": {
+                            "mime_type": "video/mp4",
+                            "data": clip_data
+                        }
+                    })
             else:
                 logger.warning(f"[{fn}] Clip file not found: {clip_path}")
         
@@ -318,7 +324,12 @@ async def gemini_check_abnormal_blinks(frames_or_clip, model) -> int:
         if os.path.exists(frames_or_clip):
             with open(frames_or_clip, "rb") as f:
                 clip_data = base64.b64encode(f.read()).decode()
-                parts = [prompt, {"mime_type": "video/mp4", "data": clip_data}]
+                parts = [prompt, {
+                    "inline_data": {
+                        "mime_type": "video/mp4",
+                        "data": clip_data
+                    }
+                }]
             logger.info(f"[{fn}] Analyzing video clip for abnormal blinks")
         else:
             logger.warning(f"[{fn}] Clip file not found: {frames_or_clip}")
@@ -428,7 +439,12 @@ async def gemini_check_lipsync(video_path: str, transcript: Dict[str, Any] | str
         prompt = ("Watch the clip and read the transcript. "
                   "Are the person's lip movements accurately synchronized with the spoken words in the transcript? "
                   "Respond with only YES for synced, or NO for not synced.")
-        parts = [prompt, {"mime_type": "video/mp4", "data": clip_b64}, {"text": transcript_segment}]
+        parts = [prompt, {
+            "inline_data": {
+                "mime_type": "video/mp4",
+                "data": clip_b64
+            }
+        }, f"Transcript: {transcript_segment}"]
 
         resp = await safe_generate_content(model, parts)
         text = _extract_text(resp, fn)
@@ -481,6 +497,11 @@ async def gemini_detect_gibberish(
     events: List[Dict[str, Any]] = []
     if not model or not frames_or_clips:
         logger.warning(f"[{fn}] No model or no input. Skipping.")
+        logger.info(f"[{fn}] Debug - model available: {model is not None}")
+        logger.info(f"[{fn}] Debug - model type: {type(model) if model else 'None'}")
+        logger.info(f"[{fn}] Debug - frames_or_clips available: {frames_or_clips is not None}")
+        logger.info(f"[{fn}] Debug - frames_or_clips length: {len(frames_or_clips) if frames_or_clips else 0}")
+        logger.info(f"[{fn}] Debug - frames_or_clips type: {type(frames_or_clips) if frames_or_clips else 'None'}")
         return {"score": 0.0, "anomaly": False, "tags": [], "events": []}
 
     # Check if we received video clips (list of file paths) or frames (list of PIL Images)
@@ -500,7 +521,12 @@ async def gemini_detect_gibberish(
             if os.path.exists(clip_path):
                 with open(clip_path, "rb") as f:
                     clip_data = base64.b64encode(f.read()).decode()
-                    parts.append({"mime_type": "video/mp4", "data": clip_data})
+                    parts.append({
+                        "inline_data": {
+                            "mime_type": "video/mp4",
+                            "data": clip_data
+                        }
+                    })
             else:
                 logger.warning(f"[{fn}] Clip file not found: {clip_path}")
         
@@ -643,6 +669,11 @@ async def run_gemini_inspections(
     """
     fn_orchestrator = "run_gemini_inspections"
     logger.info(f"[{fn_orchestrator}] Starting inspections with video clips.")
+    logger.info(f"[{fn_orchestrator}] Debug - model available: {model is not None}")
+    logger.info(f"[{fn_orchestrator}] Debug - model type: {type(model) if model else 'None'}")
+    logger.info(f"[{fn_orchestrator}] Debug - frames count: {len(frames) if frames else 0}")
+    logger.info(f"[{fn_orchestrator}] Debug - video_path: {video_path}")
+    logger.info(f"[{fn_orchestrator}] Debug - transcript type: {type(transcript)}")
     if not model:
         logger.warning(f"[{fn_orchestrator}] No model provided. Returning default values.")
         return 0, 0, 0, 0.0, []
@@ -712,7 +743,7 @@ async def run_gemini_inspections(
             
         if enable_ocr_gibberish and shared_clips:
             logger.info(f"[{fn_orchestrator}] Preparing gemini_detect_gibberish task with {len(shared_clips)} clips.")
-            tasks_coroutines.append(gemini_detect_gibberish(shared_clips, model))
+            tasks_coroutines.append(gemini_detect_gibberish(shared_clips, model=model))
             keys.append("gibberish")
         elif enable_ocr_gibberish:
             logger.warning(f"[{fn_orchestrator}] Gibberish check enabled but no clips available, falling back to frames.")

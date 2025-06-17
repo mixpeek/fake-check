@@ -38,7 +38,7 @@ app.add_middleware(
         "http://localhost:3000", 
         "http://localhost:3001", 
         "http://localhost:5173",
-        "https://your-frontend-domain.com"
+        "https://fake-check.mixpeek.com/"
     ],
     allow_credentials=True,
     allow_methods=["*"],

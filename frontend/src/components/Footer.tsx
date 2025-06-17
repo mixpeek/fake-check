@@ -10,7 +10,7 @@ export const Footer: React.FC = () => {
         <div className="max-w-2xl mx-auto text-center">
           <div className="flex items-center justify-center">
             <ScanFace className="h-6 w-6 text-primary-500" />
-            <span className="ml-2 text-xl font-bold">Mixpeek</span>
+            <span className="ml-2 text-xl font-bold">FakeCheck</span>
           </div>
           <p className="mt-2 text-gray-400 text-sm">
             Advanced AI-powered deepfake detection for everyone. Helping combat misinformation in the digital age.
@@ -37,7 +37,7 @@ export const Footer: React.FC = () => {
         
         <div className="mt-12 border-t border-gray-800 pt-8">
           <p className="text-gray-400 text-sm text-center">
-            © {currentYear} FakeCheck. All rights reserved.
+            © {currentYear} Mixpeek. All rights reserved.
           </p>
         </div>
       </div>
