@@ -35,7 +35,7 @@ function App() {
               Spot AI-Generated Videos in Seconds
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              Our advanced detection system combines neural network analysis, visual artifact detection, audio-visual synchronization, eye movement tracking, text corruption analysis, and motion flow detection to verify video authenticity with scientific precision.
+              Our advanced detection system combines visual artifact detection, audio-visual synchronization, text corruption analysis and motion flow detection to verify video authenticity with scientific precision.
             </p>
           </motion.section>
           
