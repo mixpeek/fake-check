@@ -7,10 +7,10 @@ VISUAL_CLIP_ANOMALY_THRESHOLD = 0.60 # If clip_score (0-1, higher is more fake-l
 
 FUSION_MODEL_WEIGHTS = {
     "visual_clip": 0.28,
-    "gemini_visual_artifacts": 0.37,
-    "gemini_lipsync_issue": 0.145,
+    "gemini_visual_artifacts": 0.36,
+    "gemini_lipsync_issue": 0.125,
     "gemini_blink_abnormality": 0.101,
-    "gibberish": 0.077,
+    "gibberish": 0.057,
     "flow": 0.077,
 } 
 

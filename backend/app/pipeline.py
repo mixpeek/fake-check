@@ -134,6 +134,8 @@ async def run_detection_pipeline(
                 transcription,
                 gemini_model,
                 fps=fps,
+                video_duration=processed_dur,
+                job_id=job_id,
                 enable_visual_artifacts=True,
                 enable_lipsync=lipsync_enabled,
                 enable_abnormal_blinks=True,
