@@ -13,21 +13,21 @@ interface ExampleVideo {
 const exampleVideos: ExampleVideo[] = [
   {
     id: '1',
-    title: 'AI Generated Speech',
+    title: 'AI Generated Video',
     path: '/videos/example-1.mp4',
     thumbnail: '/videos/example-1.mp4',
     duration: '0:15'
   },
   {
     id: '2',
-    title: 'Deepfake Example',
+    title: 'Deepfake Video',
     path: '/videos/example-2.mp4',
     thumbnail: '/videos/example-2.mp4',
     duration: '0:30'
   },
   {
     id: '3',
-    title: 'Real Video Reference',
+    title: 'Real Video',
     path: '/videos/example-3.mp4',
     thumbnail: '/videos/example-3.mp4',
     duration: '0:20'
