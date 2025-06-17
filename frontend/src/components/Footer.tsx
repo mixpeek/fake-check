@@ -37,7 +37,7 @@ export const Footer: React.FC = () => {
         
         <div className="mt-12 border-t border-gray-800 pt-8">
           <p className="text-gray-400 text-sm text-center">
-            © {currentYear} FakeCheck. All rights reserved.
+            © {currentYear} Mixpeek. All rights reserved.
           </p>
         </div>
       </div>
