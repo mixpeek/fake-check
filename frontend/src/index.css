@@ -8,52 +8,246 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold;
+    @apply font-bold tracking-tight;
   }
 
   h1 {
-    @apply text-3xl leading-tight md:text-4xl;
+    @apply text-4xl leading-tight md:text-5xl lg:text-6xl;
   }
   
   h2 {
-    @apply text-2xl leading-tight md:text-3xl;
+    @apply text-3xl leading-tight md:text-4xl;
   }
   
   h3 {
-    @apply text-xl leading-snug md:text-2xl;
+    @apply text-2xl leading-tight md:text-3xl;
   }
 
   h4 {
-    @apply text-lg leading-snug md:text-xl;
+    @apply text-xl leading-tight md:text-2xl;
+  }
+
+  h5 {
+    @apply text-lg leading-tight md:text-xl;
+  }
+
+  h6 {
+    @apply text-base leading-tight md:text-lg;
+  }
+
+  p {
+    @apply leading-relaxed;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply bg-gradient-to-r from-primary-600 to-blue-600 text-white hover:from-primary-700 hover:to-blue-700 focus:ring-primary-500 shadow-lg hover:shadow-xl;
   }
 
   .btn-secondary {
-    @apply bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 focus:ring-gray-500;
+    @apply bg-white text-gray-900 border-2 border-gray-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 focus:ring-primary-500 shadow-sm hover:shadow-md;
   }
 
   .btn-danger {
-    @apply bg-error-600 text-white hover:bg-error-700 focus:ring-error-500;
+    @apply bg-gradient-to-r from-red-600 to-pink-600 text-white hover:from-red-700 hover:to-pink-700 focus:ring-red-500 shadow-lg hover:shadow-xl;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden;
+    @apply bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-xl;
   }
 
   .input {
-    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500;
+    @apply block w-full rounded-xl border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-200;
+  }
+
+  /* Custom gradient backgrounds */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 via-blue-500 to-purple-500;
+  }
+
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-500 via-purple-500 to-pink-500;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-r from-green-500 to-emerald-500;
+  }
+
+  .gradient-danger {
+    @apply bg-gradient-to-r from-red-500 to-pink-500;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-r from-yellow-500 to-orange-500;
+  }
+}
+
+@layer utilities {
+  /* Custom animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    }
+    50% { 
+      box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s ease-in-out infinite;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.5s ease-out;
+  }
+
+  /* Text gradients */
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-success {
+    @apply bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent;
+  }
+
+  /* Better shadows */
+  .shadow-soft {
+    box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-medium {
+    box-shadow: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-strong {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Glass morphism */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/50;
+  }
+
+  /* Enhanced typography */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .font-display {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+
+  /* Focus styles */
+  .focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Better selection */
+  ::selection {
+    @apply bg-primary-100 text-primary-900;
   }
 }

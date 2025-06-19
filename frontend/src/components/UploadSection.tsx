@@ -39,7 +39,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     if (currentVideo) {
       return (
         <motion.div 
-          className="card p-6"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -113,20 +113,5 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     );
   };
 
-  return (
-    <motion.section 
-      className="w-full max-w-3xl mx-auto px-4 py-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="text-center mb-8">
-        <p className="mt-4 text-gray-600">
-          Upload any video to see our detection in action. We'll analyze it across multiple dimensions and show you exactly what we found.
-        </p>
-      </div>
-
-      {renderContent()}
-    </motion.section>
-  );
+  return <div>{renderContent()}</div>;
 };

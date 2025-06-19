@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Clock, Loader } from 'lucide-react';
+import { Check, Clock, Loader, Sparkles, Brain, Eye } from 'lucide-react';
 import { ProcessingStage } from '../../hooks/useVideoDetection';
 import { cn } from '../../lib/utils';
 
@@ -31,106 +31,165 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({
   const activeStage = stages.find(stage => stage.active);
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Main Status */}
-      <div className="text-center">
-        <div className="inline-flex items-center px-6 py-3 rounded-full bg-primary-50 text-primary-700 mb-4">
-          <Loader className="h-4 w-4 mr-2 animate-spin" />
-          <span className="font-medium">
-            {activeStage ? activeStage.name : 'Processing video...'}
-          </span>
-        </div>
+    <div className={cn("space-y-8", className)}>
+      {/* Main Status with enhanced visual design */}
+      <div className="text-center relative">
+        <motion.div
+          className="inline-flex items-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-50 via-blue-50 to-purple-50 border border-primary-200 text-primary-800 mb-6 shadow-lg relative overflow-hidden"
+          animate={{ scale: [1, 1.02, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {/* Animated background */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-primary-200/20 to-blue-200/20"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          />
+          
+          <motion.div
+            className="relative z-10"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <Loader className="h-5 w-5 mr-3 text-primary-600" />
+          </motion.div>
+          
+          <div className="relative z-10">
+            <span className="font-bold text-lg">
+              {activeStage ? activeStage.name : 'Processing video...'}
+            </span>
+          </div>
+          
+          <Sparkles className="h-4 w-4 ml-3 text-purple-500 animate-pulse" />
+        </motion.div>
         
         {activeStage && (
-          <p className="text-sm text-gray-600 max-w-md mx-auto">
+          <motion.p 
+            className="text-base text-gray-700 max-w-lg mx-auto font-medium"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            key={activeStage.id}
+          >
             {activeStage.description}
-          </p>
+          </motion.p>
         )}
       </div>
 
-      {/* Overall Progress Bar */}
-      <div className="space-y-2">
+      {/* Enhanced Overall Progress Bar */}
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-          <span className="text-sm text-gray-500">{Math.round(overallProgress * 100)}%</span>
+          <span className="text-base font-bold text-gray-800">Overall Progress</span>
+          <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+            {Math.round(overallProgress * 100)}%
+          </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
           <motion.div 
-            className="bg-primary-600 h-3 rounded-full transition-all duration-300"
+            className="absolute inset-0 bg-gradient-to-r from-primary-500 via-blue-500 to-purple-500 rounded-full shadow-lg"
             style={{ width: `${overallProgress * 100}%` }}
             initial={{ width: 0 }}
             animate={{ width: `${overallProgress * 100}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent rounded-full"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            style={{ width: `${overallProgress * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Time Remaining */}
+      {/* Enhanced Time Remaining */}
       {estimatedTimeRemaining > 0 && (
-        <div className="flex items-center justify-center text-sm text-gray-600">
-          <Clock className="h-4 w-4 mr-1" />
-          <span>Estimated time remaining: {formatTime(estimatedTimeRemaining)}</span>
-        </div>
+        <motion.div 
+          className="flex items-center justify-center text-base text-gray-700 bg-white rounded-xl p-4 shadow-sm border border-gray-200"
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Clock className="h-5 w-5 mr-2 text-primary-600" />
+          <span className="font-medium">
+            Estimated time remaining: <span className="text-primary-700 font-bold">{formatTime(estimatedTimeRemaining)}</span>
+          </span>
+        </motion.div>
       )}
 
-      {/* Stage Checklist */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">Analysis Progress</h4>
-        <div className="space-y-2">
+      {/* Enhanced Stage Checklist */}
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 shadow-lg border border-gray-200">
+        <div className="flex items-center mb-6">
+          <Brain className="h-6 w-6 text-primary-600 mr-3" />
+          <h4 className="text-xl font-bold text-gray-900">AI Analysis Progress</h4>
+        </div>
+        <div className="space-y-4">
           {stages.map((stage, index) => (
             <motion.div
               key={stage.id}
               className={cn(
-                "flex items-center space-x-3 p-2 rounded transition-colors",
-                stage.active && "bg-primary-50",
-                stage.completed && "bg-success-50"
+                "flex items-center space-x-4 p-4 rounded-xl transition-all duration-300 border",
+                stage.active && "bg-gradient-to-r from-primary-50 to-blue-50 border-primary-200 shadow-md",
+                stage.completed && "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-sm",
+                !stage.active && !stage.completed && "bg-white border-gray-200 hover:bg-gray-50"
               )}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              whileHover={{ x: 4 }}
             >
               <div className={cn(
-                "flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                stage.completed && "bg-success-500 border-success-500",
-                stage.active && "border-primary-500 bg-white",
-                !stage.active && !stage.completed && "border-gray-300 bg-white"
+                "flex-shrink-0 w-8 h-8 rounded-full border-3 flex items-center justify-center transition-all duration-300",
+                stage.completed && "bg-gradient-to-r from-green-500 to-emerald-500 border-green-500 shadow-lg",
+                stage.active && "border-primary-500 bg-white shadow-md",
+                !stage.active && !stage.completed && "border-gray-300 bg-gray-100"
               )}>
                 {stage.completed ? (
-                  <Check className="h-3 w-3 text-white" />
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Check className="h-5 w-5 text-white" />
+                  </motion.div>
                 ) : stage.active ? (
                   <motion.div
-                    className="w-2 h-2 bg-primary-500 rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
+                    className="w-4 h-4 bg-gradient-to-r from-primary-500 to-blue-500 rounded-full"
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
                   />
                 ) : (
-                  <div className="w-2 h-2 bg-gray-300 rounded-full" />
+                  <div className="w-3 h-3 bg-gray-400 rounded-full" />
                 )}
               </div>
               
               <div className="flex-1 min-w-0">
                 <p className={cn(
-                  "text-sm font-medium",
-                  stage.completed && "text-success-700",
-                  stage.active && "text-primary-700",
-                  !stage.active && !stage.completed && "text-gray-500"
+                  "text-base font-bold",
+                  stage.completed && "text-green-800",
+                  stage.active && "text-primary-800",
+                  !stage.active && !stage.completed && "text-gray-600"
                 )}>
                   {stage.name}
                 </p>
                 {stage.active && (
-                  <p className="text-xs text-gray-600 mt-0.5">
+                  <motion.p 
+                    className="text-sm text-gray-700 mt-1 font-medium"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
                     {stage.description}
-                  </p>
+                  </motion.p>
                 )}
               </div>
               
               {stage.active && (
                 <motion.div
                   className="flex-shrink-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
+                  initial={{ opacity: 0, rotate: 0 }}
+                  animate={{ opacity: 1, rotate: 360 }}
+                  transition={{ duration: 0.5, rotate: { duration: 2, repeat: Infinity, ease: "linear" } }}
                 >
-                  <Loader className="h-4 w-4 text-primary-600 animate-spin" />
+                  <Loader className="h-5 w-5 text-primary-600" />
                 </motion.div>
               )}
             </motion.div>
@@ -138,22 +197,37 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({
         </div>
       </div>
 
-      {/* Fun Facts / Educational Content */}
+      {/* Enhanced Educational Content */}
       {activeStage && (
         <motion.div
           key={activeStage.id}
-          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-6 shadow-lg relative overflow-hidden"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6 }}
         >
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-sm font-medium">💡</span>
-            </div>
-            <div>
-              <h5 className="text-sm font-medium text-blue-900 mb-1">Did you know?</h5>
-              <p className="text-sm text-blue-800">
+          <motion.div
+            className="absolute top-2 right-2 opacity-20"
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 4, repeat: Infinity }}
+          >
+            <Eye className="h-8 w-8 text-blue-500" />
+          </motion.div>
+          
+          <div className="flex items-start space-x-4">
+            <motion.div 
+              className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <span className="text-white text-xl">💡</span>
+            </motion.div>
+            <div className="flex-1">
+              <h5 className="text-lg font-bold text-blue-900 mb-2 flex items-center">
+                Did you know?
+                <Sparkles className="h-4 w-4 ml-2 text-purple-600 animate-pulse" />
+              </h5>
+              <p className="text-base text-blue-800 leading-relaxed font-medium">
                 {getEducationalContent(activeStage.id)}
               </p>
             </div>
@@ -166,14 +240,14 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({
 
 const getEducationalContent = (stageId: string): string => {
   const content: Record<string, string> = {
-    extracting: "AI models analyze videos frame by frame, typically processing 24-30 frames per second to detect subtle inconsistencies.",
-    visual_analysis: "The CLIP neural network was trained on 400 million image-text pairs and can detect visual patterns invisible to human eyes.",
-    artifacts: "Deepfakes often leave compression artifacts around face edges where synthetic content is blended with real video.",
-    lipsync: "Even the best deepfakes struggle with perfect lip-sync - there are often micro-delays of just 40-80 milliseconds.",
-    blinks: "Humans naturally blink 15-20 times per minute with irregular patterns. AI-generated faces often show robotic blinking.",
-    text: "AI-generated videos frequently contain corrupted text or gibberish characters that reveal their synthetic nature.",
-    motion: "Optical flow analysis can detect unnatural movement patterns when AI struggles to maintain temporal consistency.",
-    finalizing: "Our system combines results from all analysis methods to provide a comprehensive authenticity assessment."
+    extracting: "AI models analyze videos frame by frame, typically processing 24-30 frames per second to detect subtle inconsistencies that are invisible to the human eye.",
+    visual_analysis: "The CLIP neural network was trained on 400 million image-text pairs and can detect visual patterns with superhuman precision, identifying synthetic faces with 94% accuracy.",
+    artifacts: "Deepfakes often leave compression artifacts around face edges where synthetic content is blended with real video - these tiny distortions are telltale signs of manipulation.",
+    lipsync: "Even the best deepfakes struggle with perfect lip-sync - there are often micro-delays of just 40-80 milliseconds that our AI can detect but humans cannot perceive.",
+    blinks: "Humans naturally blink 15-20 times per minute with irregular patterns. AI-generated faces often show robotic blinking or no blinking at all - a dead giveaway.",
+    text: "AI-generated videos frequently contain corrupted text or gibberish characters that reveal their synthetic nature, as text rendering is still challenging for AI systems.",
+    motion: "Optical flow analysis can detect unnatural movement patterns when AI struggles to maintain temporal consistency across video frames.",
+    finalizing: "Our system combines results from all analysis methods using advanced fusion algorithms to provide a comprehensive authenticity assessment with confidence scoring."
   };
   
   return content[stageId] || "Advanced AI analysis is detecting patterns that indicate whether this video is authentic or synthetic.";
