@@ -119,22 +119,30 @@ function App() {
                  animate={{ scale: 1 }}
                  transition={{ duration: 0.8, delay: 0.2 }}
                >
-                 <motion.div 
-                   className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-primary-100 to-blue-100 border border-primary-200 mb-6"
-                  whileHover={{ scale: 1.05 }}
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ 
-                    y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-                    scale: { duration: 0.2 }
-                  }}
-                >
-                  <span className="text-sm font-bold text-primary-700">🎯 AI-Powered Detection</span>
-                  <motion.div
-                    className="ml-2 w-2 h-2 bg-primary-500 rounded-full"
-                    animate={{ scale: [1, 1.5, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                </motion.div>
+                 <div className="flex justify-center mb-6">
+                  <motion.a
+                    href="https://mixpeek.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-primary-100 to-blue-100 border border-primary-200 hover:from-primary-200 hover:to-blue-200 hover:border-primary-300 transition-all duration-300"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ 
+                      scale: { duration: 0.2 }
+                    }}
+                  >
+                    <span className="text-sm font-bold text-primary-700 group-hover:text-primary-800 transition-colors">Powered by</span>
+                    <img 
+                      src="/mixpeek_color.png" 
+                      alt="Mixpeek" 
+                      className="h-5 object-contain ml-2"
+                    />
+                    <motion.div
+                      className="ml-2 w-2 h-2 bg-primary-500 rounded-full group-hover:bg-primary-600 transition-colors"
+                      animate={{ scale: [1, 1.5, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  </motion.a>
+                 </div>
               </motion.div>
 
                              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 leading-tight mb-8">
@@ -260,7 +268,7 @@ function App() {
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
                       initial={{ x: '-100%' }}
                       whileHover={{ x: '100%' }}
-                      transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6 }}
                     />
                     <span className="relative z-10">Try It Now</span>
                   </motion.button>
@@ -297,11 +305,11 @@ function App() {
                 </p>
               </div>
               
-              <UploadSection
-                currentVideo={currentVideo}
-                onFileSelect={handleFileSelect}
-                onReset={resetCurrentVideo}
-                isProcessing={isProcessing}
+            <UploadSection
+              currentVideo={currentVideo}
+              onFileSelect={handleFileSelect}
+              onReset={resetCurrentVideo}
+              isProcessing={isProcessing}
                 processingStages={processingStages}
                 currentStageIndex={currentStageIndex}
                 simulatedProgress={simulatedProgress}
@@ -336,10 +344,10 @@ function App() {
         )}
 
         {/* Enhanced Results Section */}
-        {currentVideo?.status === 'completed' && currentVideo.result && (
+            {currentVideo?.status === 'completed' && currentVideo.result && (
           <section className="bg-white py-20 lg:py-24 border-t border-gray-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <motion.div
+              <motion.div 
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
@@ -360,19 +368,19 @@ function App() {
               </motion.div>
             </div>
           </section>
-        )}
-
+            )}
+            
         {/* Enhanced History Section */}
         {history.length > 0 && (
           <section className="bg-gradient-to-br from-gray-50 to-white py-20 lg:py-24">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-              <HistorySection history={history} />
-            </div>
+            <HistorySection history={history} />
+          </div>
           </section>
         )}
-
-        {/* Info Section */}
-        <InfoSection />
+          
+          {/* Info Section */}
+          <InfoSection />
       </main>
       
       <Footer />

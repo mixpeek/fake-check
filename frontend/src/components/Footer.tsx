@@ -16,18 +16,7 @@ export const Footer: React.FC = () => {
             Advanced AI-powered deepfake detection for everyone. Helping combat misinformation in the digital age.
           </p>
           
-          {/* Build Your Own Button */}
-          <div className="mt-6">
-            <a
-              href="https://mixpeek.com/contact"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 px-6 py-3 text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <span>Build Your Own</span>
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </div>
+
           
           {/* Social Media Links */}
           <div className="mt-6 flex space-x-4 justify-center">
