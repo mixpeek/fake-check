@@ -18,6 +18,8 @@ from langdetect import detect_langs
 from google.api_core import exceptions as _gax_exc
 import numpy as np
 
+from .. import config
+
 # ───────────────────────── logging ──────────────────────────
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -111,6 +113,10 @@ def _pick_frames(frames: List[Image.Image], num_frames_to_pick: int = 12) -> Lis
     """
     Selects a specified number of evenly-spaced frames from a list.
     """
+    # In low resource mode, reduce frame count to save on Gemini API usage and processing
+    if config.LOW_RESOURCE:
+        num_frames_to_pick = min(num_frames_to_pick, 6)
+    
     n = len(frames)
     if n <= num_frames_to_pick:
         return frames

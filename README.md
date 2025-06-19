@@ -1,4 +1,4 @@
-# FakeCheck: AI-Powered Deepfake Detection Platform
+# FakeCheck: AI-Powered Deepfake & AI Generated Video Detection Platform
 
 This repository contains the source code for FakeCheck, a full-stack application designed to detect deepfakes and AI-generated video content. It features a React/TypeScript frontend and a Python/FastAPI backend that work together to provide a seamless user experience.
 

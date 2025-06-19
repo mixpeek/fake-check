@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from .. import config
+
 # from google.cloud import videointelligence_v1 as vi  # Disabled for demo
 
 def extract_audio(video_path: str, duration_to_process: Optional[float] = None) -> Optional[str]:
@@ -247,6 +249,19 @@ def sample_video_content(
     
     # Final safeguard to ensure we don't exceed max_frames_limit due to any rounding
     pil_frames = pil_frames[:max_frames_to_sample]
+
+    # In low resource mode, downscale frames to 360p to conserve memory
+    if config.LOW_RESOURCE:
+        resized_frames: List[Image.Image] = []
+        target_height = 360
+        for frame in pil_frames:
+            w, h = frame.size
+            if h > target_height:
+                new_w = int(w * target_height / h)
+                resized_frames.append(frame.resize((new_w, target_height), Image.BICUBIC))
+            else:
+                resized_frames.append(frame)
+        pil_frames = resized_frames
 
     return pil_frames, temp_wav_path, actual_total_duration, processed_duration_sec
 

@@ -10,6 +10,8 @@ import whisper
 from PIL import Image
 import numpy as np
 
+from .. import config
+
 def sigmoid(x: float) -> float:
     if x < -700: x = -700 
     return 1 / (1 + np.exp(-x))
@@ -67,7 +69,7 @@ def calculate_visual_clip_score(
     fake_text_features = _cached_clip_text_features[cache_key]['fake']
 
     all_image_features_list = []
-    batch_size = 16 # Adjust based on GPU memory
+    batch_size = 8 if config.LOW_RESOURCE else 16  # Reduce batch size in low resource mode
     for i in range(0, len(pil_frames), batch_size):
         batch = pil_frames[i:i+batch_size]
         images_tensor = torch.stack([clip_preprocess_fn(frame) for frame in batch]).to(device)
