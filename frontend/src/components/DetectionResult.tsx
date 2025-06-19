@@ -337,20 +337,26 @@ export const DetectionResult: React.FC<DetectionResultProps> = ({ result, videoU
             </button>
           </div>
 
-          {/* Video Details */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-            <h4 className="font-medium text-gray-900 mb-3">Video Details</h4>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p>Video Length: {details.videoLength.toFixed(1)}s</p>
-              <p>Original Length: {details.originalVideoLength.toFixed(1)}s</p>
-              {details.transcriptSnippet && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="font-medium text-gray-700 mb-1">Transcript:</p>
-                  <p className="italic">{details.transcriptSnippet}</p>
-                </div>
-              )}
-            </div>
-          </div>
+                     {/* Video Details */}
+           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+             <h4 className="font-medium text-gray-900 mb-3">Video Details</h4>
+             <div className="space-y-2 text-sm text-gray-600">
+               <p>Video Length: {details.videoLength.toFixed(1)}s</p>
+               <p>Original Length: {details.originalVideoLength.toFixed(1)}s</p>
+               {/* Transcript section commented out for now - can be re-enabled later
+               {details.transcriptSnippet && 
+                !details.transcriptSnippet.includes('No speech detected') &&
+                !details.transcriptSnippet.includes('[Non-English language detected:') && (
+                 <div className="mt-3 pt-3 border-t border-gray-100">
+                   <p className="font-medium text-gray-700 mb-1">Transcript:</p>
+                   <p className="italic">
+                     {details.transcriptSnippet}
+                   </p>
+                 </div>
+               )}
+               */}
+             </div>
+           </div>
         </motion.div>
       </div>
 

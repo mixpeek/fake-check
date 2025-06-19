@@ -31,6 +31,10 @@ FAKE_PERSON_PROMPTS_CLIP = [
 
 _cached_clip_text_features = {}  # Global cache
 
+# Quantile and scaling constants for CLIP scoring
+CLIP_SCORE_QUANTILE = 0.95
+CLIP_SCORE_SCALE = 8.0
+
 @torch.inference_mode()
 def calculate_visual_clip_score(
     pil_frames: List[Image.Image],
@@ -83,8 +87,8 @@ def calculate_visual_clip_score(
     differential_scores = max_fake_sim_per_frame - avg_real_sim_per_frame
     if differential_scores.numel() == 0: return 0.0
     
-    # Apply scaling and sigmoid. The scaling factor (5.0) is empirical and might need tuning.
-    scaled_score = differential_scores.quantile(0.90).item() * 5.0 
+    # Apply scaling and sigmoid using tuned constants.
+    scaled_score = differential_scores.quantile(CLIP_SCORE_QUANTILE).item() * CLIP_SCORE_SCALE
     final_score = sigmoid(scaled_score)
     print(f"CLIP Debug: Final score: {final_score:.3f} (scaled: {scaled_score:.3f})", file=sys.stderr)
     return final_score

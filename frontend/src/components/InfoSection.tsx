@@ -609,7 +609,7 @@ export const InfoSection: React.FC = () => {
             <div>
               <h3 className="text-2xl font-bold text-green-900 mb-3">Your Privacy is Protected</h3>
               <p className="text-green-800 leading-relaxed">
-                We do not store, save, or retain any videos or personal information you upload. All analysis is performed in real-time and your data is automatically deleted after processing. Your privacy and security are our top priority.
+                We do not store, save, or retain the videos you upload. All analysis is performed in real-time and your data is automatically deleted after processing. Your privacy and security are our top priority.
               </p>
             </div>
           </div>
