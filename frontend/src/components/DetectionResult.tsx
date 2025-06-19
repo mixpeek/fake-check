@@ -275,8 +275,8 @@ export const DetectionResult: React.FC<DetectionResultProps> = ({ result, videoU
     {
       title: 'Text Analysis',
       description: 'Detects unnatural or generated text patterns.',
-      failed: details.heuristicChecks.ocr > 0.5,
-      score: details.heuristicChecks.ocr,
+      failed: details.heuristicChecks.gibberish > 0.5,
+      score: details.heuristicChecks.gibberish,
       events: details.events.filter(e => e.module === 'gibberish_text'),
       documentationUrl: 'https://mixpeek.com/extractors/gibberish-text-detection',
       technicalDetails: 'Performs OCR on video frames to detect corrupted text or gibberish characters that often appear in AI-generated content.'

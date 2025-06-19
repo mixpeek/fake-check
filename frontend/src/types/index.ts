@@ -13,7 +13,7 @@ export interface HeuristicChecks {
   gemini_visual_artifacts: number;
   gemini_lipsync_issue: number;
   gemini_blink_abnormality: number;
-  ocr: number;
+  gibberish: number;
   flow: number;
   audio: number;
   video_ai: number;

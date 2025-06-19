@@ -529,10 +529,13 @@ export const InfoSection: React.FC = () => {
           className="mb-20"
         >
           <div className="text-center mb-16">
-            <h3 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
-              Our 6 Detection Methods
+            <h3 className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
+              Stage 3 Breakdown
             </h3>
-            <div className="w-24 h-1 bg-gradient-to-r from-primary-500 to-blue-500 mx-auto rounded-full"></div>
+            <p className="text-xl md:text-2xl text-gray-600 mb-6 font-medium">
+              6 Detection Methods
+            </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"></div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
@@ -545,14 +548,17 @@ export const InfoSection: React.FC = () => {
                 transition={{ duration: 0.5, delay: 0.1 * index + 0.3 }}
                 whileHover={{ y: -8 }}
               >
-                <div className="bg-white rounded-3xl p-8 border-2 border-gray-100 hover:border-primary-200 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden">
+                <div className="bg-white rounded-3xl p-8 border-2 border-gray-100 hover:border-blue-200 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden">
+                  {/* Top blue bar that appears on hover */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  
                   {/* Background gradient overlay */}
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-500 ${method.gradientBg}`}></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-500 bg-gradient-to-br from-blue-500 to-blue-600"></div>
                   
                   {/* Icon container */}
                   <div className="relative">
                     <motion.div 
-                      className={`w-20 h-20 rounded-3xl ${method.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
+                      className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
                       whileHover={{ rotate: [0, -5, 5, 0] }}
                       transition={{ duration: 0.3 }}
                     >
@@ -560,7 +566,7 @@ export const InfoSection: React.FC = () => {
                     </motion.div>
                     
                     {/* Title and description */}
-                    <h4 className="text-2xl font-black text-gray-900 mb-3 group-hover:text-primary-700 transition-colors duration-300">
+                    <h4 className="text-2xl font-black text-gray-900 mb-3 group-hover:text-blue-700 transition-colors duration-300">
                       {method.title}
                     </h4>
                     <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
@@ -574,7 +580,7 @@ export const InfoSection: React.FC = () => {
                           href={method.documentationUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-semibold transition-colors group/link"
+                          className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors group/link"
                           whileHover={{ x: 5 }}
                         >
                           <span>Learn more</span>
