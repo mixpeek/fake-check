@@ -8,7 +8,7 @@ The platform allows users to upload a video file, which is then analyzed by a so
 
 ## Architecture
 
-*   **Backend**: A powerful FastAPI-based REST API that orchestrates the deepfake detection pipeline. It uses CLIP for visual authenticity scoring, Whisper for audio transcription, and Google's Gemini Pro for advanced visual and audio analysis.
+*   **Backend**: A powerful FastAPI-based REST API that orchestrates the fake video detection pipeline. It uses CLIP for visual authenticity scoring, Whisper for audio transcription, and Google's Gemini Pro for advanced visual and audio analysis.
 *   **Frontend**: A modern, responsive web application built with React, TypeScript, and Tailwind CSS. It provides the user interface for uploading videos and viewing the analysis results.
 
 ## Prerequisites

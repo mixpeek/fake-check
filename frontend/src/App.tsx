@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Header } from './components/Header';
 import { UploadSection } from './components/UploadSection';
 import { DetectionResult } from './components/DetectionResult';
+import { ResultsSkeleton } from './components/ui/ResultsSkeleton';
 import { HistorySection } from './components/HistorySection';
 import { InfoSection } from './components/InfoSection';
 import { Footer } from './components/Footer';
@@ -14,6 +15,10 @@ function App() {
     currentVideo,
     history,
     isProcessing,
+    processingStages,
+    currentStageIndex,
+    simulatedProgress,
+    estimatedTimeRemaining,
     handleFileSelect,
     resetCurrentVideo
   } = useVideoDetection();
@@ -46,11 +51,31 @@ function App() {
               onFileSelect={handleFileSelect}
               onReset={resetCurrentVideo}
               isProcessing={isProcessing}
+              processingStages={processingStages}
+              currentStageIndex={currentStageIndex}
+              simulatedProgress={simulatedProgress}
+              estimatedTimeRemaining={estimatedTimeRemaining}
             />
+            
+            {/* Results Section */}
+            {currentVideo?.status === 'processing' && (
+              <motion.div 
+                className="w-full max-w-6xl mx-auto px-4 pb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Analysis Results Preview</h3>
+                  <p className="text-sm text-gray-600">Your detailed results will appear here once analysis is complete</p>
+                </div>
+                <ResultsSkeleton />
+              </motion.div>
+            )}
             
             {currentVideo?.status === 'completed' && currentVideo.result && (
               <motion.div 
-                className="w-full max-w-3xl mx-auto px-4 pb-8"
+                className="w-full max-w-6xl mx-auto px-4 pb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}

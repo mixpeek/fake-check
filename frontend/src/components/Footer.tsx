@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScanFace, Github, Twitter } from 'lucide-react';
+import { ScanFace, Github, Twitter, ExternalLink } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -15,12 +15,28 @@ export const Footer: React.FC = () => {
           <p className="mt-2 text-gray-400 text-sm">
             Advanced AI-powered deepfake detection for everyone. Helping combat misinformation in the digital age.
           </p>
-          <div className="mt-4 flex space-x-4 justify-center">
+          
+          {/* Build Your Own Button */}
+          <div className="mt-6">
+            <a
+              href="https://mixpeek.com/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 px-6 py-3 text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <span>Build Your Own</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+          
+          {/* Social Media Links */}
+          <div className="mt-6 flex space-x-4 justify-center">
             <a 
               href="https://x.com/mixpeek" 
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
+              title="Follow us on Twitter"
             >
               <Twitter className="h-5 w-5" />
             </a>
@@ -29,6 +45,7 @@ export const Footer: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
+              title="View on GitHub"
             >
               <Github className="h-5 w-5" />
             </a>
@@ -37,7 +54,16 @@ export const Footer: React.FC = () => {
         
         <div className="mt-12 border-t border-gray-800 pt-8">
           <p className="text-gray-400 text-sm text-center">
-            © {currentYear} Mixpeek. All rights reserved.
+            © {currentYear}{' '}
+            <a 
+              href="https://mixpeek.com/contact" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Mixpeek
+            </a>
+            . All rights reserved.
           </p>
         </div>
       </div>

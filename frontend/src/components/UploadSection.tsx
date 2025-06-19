@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { DropZone } from './ui/DropZone';
 import { ProgressBar } from './ui/ProgressBar';
+import { ProcessingAnimation } from './ui/ProcessingAnimation';
 import { Button } from './ui/Button';
 import { RefreshCcw, FileVideo } from 'lucide-react';
 import { AnalyzedVideo } from '../types';
+import { ProcessingStage } from '../hooks/useVideoDetection';
 import { formatFileSize } from '../lib/utils';
 import { ExampleVideos } from './ExampleVideos';
 
@@ -13,13 +15,21 @@ interface UploadSectionProps {
   onFileSelect: (file: File) => void;
   onReset: () => void;
   isProcessing: boolean;
+  processingStages?: ProcessingStage[];
+  currentStageIndex?: number;
+  simulatedProgress?: number;
+  estimatedTimeRemaining?: number;
 }
 
 export const UploadSection: React.FC<UploadSectionProps> = ({
   currentVideo,
   onFileSelect,
   onReset,
-  isProcessing
+  isProcessing,
+  processingStages = [],
+  currentStageIndex = 0,
+  simulatedProgress = 0,
+  estimatedTimeRemaining = 0
 }) => {
   const handleExampleSelect = (file: File) => {
     onFileSelect(file);
@@ -70,11 +80,13 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           )}
           
           {currentVideo.status === 'processing' && (
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700">
-                <div className="mr-2 h-2 w-2 rounded-full bg-primary-500 animate-pulse"></div>
-                <span className="text-sm font-medium">Processing video...</span>
-              </div>
+            <div className="mt-6">
+              <ProcessingAnimation
+                stages={processingStages}
+                currentStageIndex={currentStageIndex}
+                overallProgress={simulatedProgress}
+                estimatedTimeRemaining={estimatedTimeRemaining}
+              />
             </div>
           )}
           

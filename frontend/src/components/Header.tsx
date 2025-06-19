@@ -33,7 +33,7 @@ export const Header: React.FC = () => {
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
             >
-              <span>Contact Us</span>
+              <span>Build your Own</span>
               <ExternalLink className="h-4 w-4" />
             </a>
           </div>
