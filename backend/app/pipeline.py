@@ -149,9 +149,13 @@ async def run_detection_pipeline(
 
         logger.info(f"[{run_id}] Step 5: Running heuristic detectors.")
         
-        logger.info(f"[{run_id}] Starting heuristic: flow.detect_spikes")
-        flow_res  = flow.detect_spikes(frames, fps)
-        logger.info(f"[{run_id}] Completed flow.detect_spikes. Score: {flow_res.get('score', -1):.2f}, Anomaly: {flow_res.get('anomaly', 'N/A')}, Events: {len(flow_res.get('events', []))}")
+        if config.LOW_RESOURCE:
+            logger.info(f"[{run_id}] Low resource mode enabled - skipping flow.detect_spikes")
+            flow_res = {"score": 0.0, "anomaly": False, "tags": [], "events": []}
+        else:
+            logger.info(f"[{run_id}] Starting heuristic: flow.detect_spikes")
+            flow_res  = flow.detect_spikes(frames, fps)
+            logger.info(f"[{run_id}] Completed flow.detect_spikes. Score: {flow_res.get('score', -1):.2f}, Anomaly: {flow_res.get('anomaly', 'N/A')}, Events: {len(flow_res.get('events', []))}")
 
         # logger.info(f"[{run_id}] Starting heuristic: video.detect_lighting_jumps")
         # shot_res  = video.detect_lighting_jumps(video_path)

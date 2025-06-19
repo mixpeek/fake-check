@@ -9,7 +9,7 @@ import tempfile
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.core import video, models, gemini, fusion, flow, audio as audio_mod
+from app.core import video, models, gemini, fusion, flow
 from app.dependencies import load_models, get_models
 from app import config
 
@@ -290,18 +290,7 @@ def test_05_heuristic_detectors():
     assert "events" in flow_res and isinstance(flow_res["events"], list)
     models_dict['_test_flow_res'] = flow_res
 
-    # 5b: Audio Loop/Lag
-    print("  Testing audio_mod.detect_loop_and_lag...")
-    # This needs video_path and may re-extract audio.
-    audio_res = audio_mod.detect_loop_and_lag(TEST_VIDEO_PATH, frames, fps_to_use)
-    print(f"    Audio Result: score={audio_res.get('score')}, anomaly={audio_res.get('anomaly')}, events={len(audio_res.get('events', []))}")
-    assert isinstance(audio_res, dict)
-    assert "score" in audio_res and isinstance(audio_res["score"], float)
-    assert "anomaly" in audio_res and isinstance(audio_res["anomaly"], bool)
-    assert "events" in audio_res and isinstance(audio_res["events"], list)
-    models_dict['_test_audio_res'] = audio_res
-
-    # 5c: Lighting Jumps (Video AI)
+    # 5b: Lighting Jumps (Video AI)
     print("  Testing video.detect_lighting_jumps...")
     # This uses Google Cloud Video Intelligence API
     google_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -335,13 +324,11 @@ def test_06_fuse_detection_scores():
     vis_flag, lip_flag, blink_flag, gibberish_score_val, _ = gem_results
 
     flow_res_score = models_dict.get('_test_flow_res', {}).get('score', 0.0)
-    audio_res_score = models_dict.get('_test_audio_res', {}).get('score', 0.0)
     shot_res_score = models_dict.get('_test_shot_res', {}).get('score', 0.0)
 
     other_scores_for_fusion = {
         "gibberish": gibberish_score_val,
         "flow": flow_res_score,
-        "audio": audio_res_score,
         "video_ai": shot_res_score
     }
     

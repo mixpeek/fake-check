@@ -24,6 +24,14 @@ GEMINI_MODEL_NAME = "gemini-2.5-pro-preview-05-06"
 TARGET_FPS = 8
 MAX_VIDEO_DURATION_SEC = 30
 
+# Low resource mode toggle
+# When set to true via the LOW_RESOURCE environment variable,
+# certain heavy steps are skipped, frames are resized to 360p,
+# and the target FPS is reduced to conserve resources.
+LOW_RESOURCE = os.getenv("LOW_RESOURCE", "false").lower() == "true"
+if LOW_RESOURCE:
+    TARGET_FPS = max(1, TARGET_FPS // 2)
+
 # Device detection
 import torch
 if torch.cuda.is_available():

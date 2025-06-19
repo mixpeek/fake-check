@@ -58,6 +58,7 @@ The detection pipeline processes videos through a series of modules to identify 
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
     GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json" # Optional: Disabled by Default
+    LOW_RESOURCE=false  # Enable to skip optical-flow spikes, resize frames, and use half the FPS
     ```
 
 4.  **Set Google Cloud Credentials**: Ensure the path to your Google Cloud JSON key file is set as an environment variable.

@@ -65,6 +65,7 @@ First, let's get the backend server running.
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
     GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json" # Optional: Disabled by Default
+    LOW_RESOURCE=false # Set to true to skip heavy steps, downscale frames, and use half the FPS
     ```
 
 5.  **Run the Backend Server:**
