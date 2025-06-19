@@ -115,7 +115,7 @@ def _pick_frames(frames: List[Image.Image], num_frames_to_pick: int = 12) -> Lis
     if n <= num_frames_to_pick:
         return frames
     # Use np.linspace to get evenly spaced indices, then convert to int and remove duplicates
-    indices = sorted(list(set(np.linspace(0, n - 1, num=num_frames_to_pick, dtype=int))))
+    indices = sorted(list(set(int(i) for i in np.linspace(0, n - 1, num=num_frames_to_pick, dtype=int))))
     return [frames[i] for i in indices]
 
 def _extract_text(resp, fn=""):
@@ -370,7 +370,7 @@ async def gemini_detect_gibberish(
     else:
         # Use np.linspace for even distribution, then ensure unique indices
         indices_to_pick = np.linspace(0, len(frames) - 1, num=MAX_OCR_FRAMES_TO_PROCESS, dtype=int)
-        unique_indices = sorted(list(set(indices_to_pick)))
+        unique_indices = sorted(list(set(int(i) for i in indices_to_pick)))
         selected_frames_with_indices = [(i, frames[i]) for i in unique_indices]
         if len(selected_frames_with_indices) > MAX_OCR_FRAMES_TO_PROCESS:
             selected_frames_with_indices = selected_frames_with_indices[:MAX_OCR_FRAMES_TO_PROCESS]
@@ -416,7 +416,7 @@ async def gemini_detect_gibberish(
                         "dur": 0.0,
                         "meta": {
                             "response": response,
-                            "frame_index": original_idx,
+                            "frame_index": int(original_idx),  # Convert numpy.int64 to Python int
                             "frame_time": ts
                         }
                     })
