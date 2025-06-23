@@ -65,6 +65,10 @@ First, let's get the backend server running.
     GEMINI_API_KEY="your_gemini_key_here"
     HF_TOKEN="your_huggingface_token_here"
     GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/google-cloud-key.json" # Optional: Disabled by Default
+    # Set LOW_RESOURCE=true to conserve API usage and run checks on sampled
+    # frames only. When false (default) Gemini will analyze up to 30 seconds
+    # of video for visual and blink detection.
+    LOW_RESOURCE=false
     ```
 
 5.  **Run the Backend Server:**

@@ -174,58 +174,132 @@ def _english_ppl_proxy(text: str) -> float:
     return (len(non_words) / len(words)) * 100
 
 # 3) Individual Gemini checks
-async def gemini_check_visual_artifacts(frames: List[Image.Image], model) -> int:
+async def gemini_check_visual_artifacts(frames: List[Image.Image], video_path: str, model) -> int:
+    """Check a video for deepfake-style visual artifacts.
+
+    If :data:`config.LOW_RESOURCE` is ``True`` the check operates on a small
+    subset of frames. Otherwise the full video clip (up to 30 seconds) is sent
+    to Gemini.
+    """
     fn = "gemini_check_visual_artifacts"
-    if not model or not frames:
+    if not model:
         return 0
-    
-    prompt = (
-        "Analyze the following video frames for any signs of AI manipulation or deepfake artifacts. "
-        "Pay close attention to subtle inconsistencies. Specifically look for:\n"
-        "- Warping or distortion in the background, especially around the person's head.\n"
-        "- Unnatural skin texture (too smooth or waxy).\n"
-        "- Flickering or strange artifacts around the edges of the face or hair.\n"
-        "- Inconsistent lighting or shadows on the face compared to the environment.\n"
-        "- Any unusual 'morphing' or 'melting' effects between frames.\n\n"
-        "Based on your analysis, are there visual artifacts that suggest this is a deepfake? "
-        "Respond with only YES or NO."
-    )
 
-    parts = [prompt] + [
-        {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
-        for f in _pick_frames(frames)
-    ]
-    try:
-        resp = await safe_generate_content(model, parts)
-        text = _extract_text(resp, fn)
+    if config.LOW_RESOURCE:
+        if not frames:
+            return 0
 
-        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+        prompt = (
+            "Analyze the following video frames for any signs of AI manipulation or deepfake artifacts. "
+            "Pay close attention to subtle inconsistencies. Specifically look for:\n"
+            "- Warping or distortion in the background, especially around the person's head.\n"
+            "- Unnatural skin texture (too smooth or waxy).\n"
+            "- Flickering or strange artifacts around the edges of the face or hair.\n"
+            "- Inconsistent lighting or shadows on the face compared to the environment.\n"
+            "- Any unusual 'morphing' or 'melting' effects between frames.\n\n"
+            "Based on your analysis, are there visual artifacts that suggest this is a deepfake? "
+            "Respond with only YES or NO."
+        )
 
-        return 1 if "YES" in text else 0
-    except Exception as e:
-        _log_exc(fn, e); return 0
+        parts = [prompt] + [
+            {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
+            for f in _pick_frames(frames)
+        ]
 
-async def gemini_check_abnormal_blinks(frames: List[Image.Image], model) -> int:
+        try:
+            resp = await safe_generate_content(model, parts)
+            text = _extract_text(resp, fn)
+
+            print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+
+            return 1 if "YES" in text else 0
+        except Exception as e:
+            _log_exc(fn, e); return 0
+    else:
+        if not video_path:
+            return 0
+
+        try:
+            video_b64 = base64.b64encode(open(video_path, "rb").read()).decode()
+        except Exception as e:
+            logger.warning(f"[{fn}] Failed reading video: {e}")
+            return 0
+
+        prompt = (
+            "Analyze this entire video for signs of AI manipulation or deepfake artifacts. "
+            "Look for warping around the head, unnatural skin texture, flickering edges, "
+            "inconsistent lighting, or morphing effects. Respond with only YES or NO."
+        )
+
+        parts = [prompt, {"mime_type": "video/mp4", "data": video_b64}]
+        try:
+            resp = await safe_generate_content(model, parts)
+            text = _extract_text(resp, fn)
+
+            print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+
+            return 1 if "YES" in text else 0
+        except Exception as e:
+            _log_exc(fn, e); return 0
+
+async def gemini_check_abnormal_blinks(frames: List[Image.Image], video_path: str, model) -> int:
+    """Detect unnatural blinking patterns in a video.
+
+    The function switches between frame-based and full-video analysis depending
+    on the :data:`config.LOW_RESOURCE` flag.
+    """
     fn = "gemini_check_abnormal_blinks"
-    if not model or not frames:
+    if not model:
         return 0
-    prompt = ("Inspect the eyes in these frames, which are sampled sequentially from a video. "
-              "Does the person blink? If so, is the blinking pattern "
-              "abnormal or unnatural (e.g., no blinking, eyes closed for too long, fluttering)? "
-              "Respond YES for abnormal blinking, NO otherwise. Only respond with YES or NO.")
-    parts = [prompt] + [
-        {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
-        for f in _pick_frames(frames)
-    ]
-    try:
-        resp = await safe_generate_content(model, parts)
-        text = _extract_text(resp, fn)
-        
-        print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
-        
-        return 1 if "YES" in text else 0
-    except Exception as e:
-        _log_exc(fn, e); return 0
+
+    if config.LOW_RESOURCE:
+        if not frames:
+            return 0
+        prompt = (
+            "Inspect the eyes in these frames, which are sampled sequentially from a video. "
+            "Does the person blink? If so, is the blinking pattern "
+            "abnormal or unnatural (e.g., no blinking, eyes closed for too long, fluttering)? "
+            "Respond YES for abnormal blinking, NO otherwise. Only respond with YES or NO."
+        )
+        parts = [prompt] + [
+            {"mime_type": "image/jpeg", "data": _pil_to_b64_jpeg(f)}
+            for f in _pick_frames(frames)
+        ]
+        try:
+            resp = await safe_generate_content(model, parts)
+            text = _extract_text(resp, fn)
+
+            print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+
+            return 1 if "YES" in text else 0
+        except Exception as e:
+            _log_exc(fn, e); return 0
+    else:
+        if not video_path:
+            return 0
+
+        try:
+            video_b64 = base64.b64encode(open(video_path, "rb").read()).decode()
+        except Exception as e:
+            logger.warning(f"[{fn}] Failed reading video: {e}")
+            return 0
+
+        prompt = (
+            "Watch this entire video carefully. Does the person blink in an abnormal or unnatural way "
+            "such as no blinking, eyes closed too long, or rapid fluttering? "
+            "Respond with YES for abnormal blinking or NO if blinking appears normal."
+        )
+
+        parts = [prompt, {"mime_type": "video/mp4", "data": video_b64}]
+        try:
+            resp = await safe_generate_content(model, parts)
+            text = _extract_text(resp, fn)
+
+            print(f"GEMINI_REPLY ({fn}): {text}", file=sys.stderr)
+
+            return 1 if "YES" in text else 0
+        except Exception as e:
+            _log_exc(fn, e); return 0
 
 async def gemini_check_lipsync(video_path: str, transcript: Dict[str, Any] | str,
                                model) -> Dict[str, Any]:
@@ -460,9 +534,15 @@ async def run_gemini_inspections(
     enable_abnormal_blinks: bool = True,
     enable_ocr_gibberish: bool = True,
 ) -> Tuple[int, int, int, float, List[Dict[str, Any]]]:
-    """
-    Runs all desired Gemini checks.  Returns:
-        (visual_flag, lipsync_flag, blink_flag, gibberish_score, all_gemini_events)
+    """Run all Gemini-based detection routines.
+
+    The caller supplies sampled ``frames`` and the original ``video_path``.
+    Depending on :data:`config.LOW_RESOURCE`, some checks may analyze only the
+    frames while others send the entire video clip (up to
+    :data:`config.MAX_VIDEO_DURATION_SEC` seconds) to Gemini.
+
+    Returns a tuple of ``(visual_flag, lipsync_flag, blink_flag,
+    gibberish_score, all_gemini_events)``.
     """
     fn_orchestrator = "run_gemini_inspections"
     logger.info(f"[{fn_orchestrator}] Starting inspections.")
@@ -475,7 +555,7 @@ async def run_gemini_inspections(
 
     if enable_visual_artifacts:
         logger.info(f"[{fn_orchestrator}] Preparing gemini_check_visual_artifacts task.")
-        tasks_coroutines.append(gemini_check_visual_artifacts(frames, model))
+        tasks_coroutines.append(gemini_check_visual_artifacts(frames, video_path, model))
         keys.append("vis")
     if enable_lipsync:
         logger.info(f"[{fn_orchestrator}] Preparing gemini_check_lipsync task.")
@@ -483,7 +563,7 @@ async def run_gemini_inspections(
         keys.append("lip")
     if enable_abnormal_blinks:
         logger.info(f"[{fn_orchestrator}] Preparing gemini_check_abnormal_blinks task.")
-        tasks_coroutines.append(gemini_check_abnormal_blinks(frames, model))
+        tasks_coroutines.append(gemini_check_abnormal_blinks(frames, video_path, model))
         keys.append("blink")
     if enable_ocr_gibberish:
         logger.info(f"[{fn_orchestrator}] Preparing gemini_detect_gibberish task.")
