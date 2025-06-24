@@ -6,7 +6,7 @@ This repository contains the source code for FakeCheck, a full-stack application
 
 The platform allows users to upload a video file, which is then analyzed by a sophisticated pipeline on the backend. The analysis involves multiple AI models and heuristic checks to identify visual artifacts, lip-sync issues, abnormal blinking, and other tell-tale signs of manipulation. The results are then presented in a detailed, user-friendly report on the frontend.
 
-![Screenshot 2025-06-24 at 1 19 24 PM](https://github.com/user-attachments/assets/14e6daa1-b297-49c3-8cd1-0e07cd420c3f)
+![Screenshot 2025-06-24 at 1 21 07 PM](https://github.com/user-attachments/assets/ce4bc7e1-04c5-41b6-9805-abe3bc159304)
 
 ## Architecture
 
@@ -97,3 +97,7 @@ With the backend running, open a **new terminal window** and set up the frontend
     The frontend application will be available at `http://localhost:5173`. It is pre-configured to connect to the backend API running on `http://localhost:8001`.
 
 You can now open `http://localhost:5173` in your browser to use the application.
+
+
+### Full Fake Video Detection Pipeline
+![Screenshot 2025-06-24 at 1 19 24 PM](https://github.com/user-attachments/assets/14e6daa1-b297-49c3-8cd1-0e07cd420c3f)
