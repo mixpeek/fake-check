@@ -6,6 +6,8 @@ This repository contains the source code for FakeCheck, a full-stack application
 
 The platform allows users to upload a video file, which is then analyzed by a sophisticated pipeline on the backend. The analysis involves multiple AI models and heuristic checks to identify visual artifacts, lip-sync issues, abnormal blinking, and other tell-tale signs of manipulation. The results are then presented in a detailed, user-friendly report on the frontend.
 
+![Screenshot 2025-06-24 at 1 19 24 PM](https://github.com/user-attachments/assets/14e6daa1-b297-49c3-8cd1-0e07cd420c3f)
+
 ## Architecture
 
 *   **Backend**: A powerful FastAPI-based REST API that orchestrates the fake video detection pipeline. It uses CLIP for visual authenticity scoring, Whisper for audio transcription, and Google's Gemini Pro for advanced visual and audio analysis.
